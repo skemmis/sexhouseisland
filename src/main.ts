@@ -1,5 +1,6 @@
 import { SpriteCharacter } from "./spriteCharacter";
 import { drawSprite } from "./pixels/render";
+import { drawText, textWidth, GLYPH_H } from "./pixelfont";
 import { PLAYER_WALK } from "./game/playerWalk";
 import { PLAYER_PORTRAIT } from "./game/playerPortrait";
 import {
@@ -353,16 +354,17 @@ function drawDialogueChoices() {
 // ---------------------------------------------------------------------------
 //  Tiny text + procedural inventory icons
 // ---------------------------------------------------------------------------
+// These keep their old (baseline-y, size) signatures so call sites are
+// unchanged, but render through the crisp pixel font. `size` maps to a pixel
+// scale; `y` is treated as the text baseline (glyph bottom).
 function text(s: string, x: number, y: number, size: number) {
-  ctx.font = `${size}px "Courier New", monospace`;
-  ctx.textBaseline = "alphabetic";
-  ctx.fillText(s, x, y);
+  const scale = size >= 11 ? 2 : 1;
+  drawText(ctx, s, x, y - GLYPH_H * scale, ctx.fillStyle as string, scale);
 }
 function centerText(s: string, cx: number, y: number, size: number) {
-  ctx.font = `${size}px "Courier New", monospace`;
-  ctx.textAlign = "center";
-  ctx.fillText(s, cx, y);
-  ctx.textAlign = "left";
+  const scale = size >= 11 ? 2 : 1;
+  const w = textWidth(s, scale);
+  drawText(ctx, s, cx - w / 2, y - GLYPH_H * scale, ctx.fillStyle as string, scale);
 }
 
 // SCUMM-style dialogue portrait box, bottom-left of the scene, with lip-sync.
@@ -381,16 +383,12 @@ function drawPortrait(t: number) {
 }
 
 function drawSpeech(s: string, x: number, y: number) {
-  ctx.font = `7px "Courier New", monospace`;
-  ctx.textAlign = "center";
-  const w = ctx.measureText(s).width;
-  const px = clamp(x, w / 2 + 4, VW - w / 2 - 4);
-  const py = clamp(y, 10, SCENE_H - 4);
-  ctx.fillStyle = "#000";
-  ctx.fillRect(px - w / 2 - 2, py - 8, w + 4, 11);
-  ctx.fillStyle = "#fff";
-  ctx.fillText(s, px, py);
-  ctx.textAlign = "left";
+  const w = textWidth(s, 1);
+  const px = clamp(Math.round(x - w / 2), 3, VW - w - 3);
+  const py = clamp(Math.round(y - 8), 3, SCENE_H - GLYPH_H - 3);
+  ctx.fillStyle = "rgba(0,0,0,0.75)";
+  ctx.fillRect(px - 2, py - 2, w + 4, GLYPH_H + 4);
+  drawText(ctx, s, px, py, "#ffffff", 1);
 }
 
 // procedural inventory icons — replace with sprite atlas in production

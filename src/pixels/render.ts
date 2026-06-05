@@ -11,13 +11,20 @@ export function drawSprite(
 ) {
   for (let y = 0; y < s.h; y++) {
     const row = s.rows[y] ?? "";
+    // Round cell boundaries (not width) so adjacent cells share an exact edge.
+    // At fractional `scale` this prevents the 1px seams that flicker the
+    // background through the sprite.
+    const py0 = Math.round(oy + y * scale);
+    const py1 = Math.round(oy + (y + 1) * scale);
     for (let x = 0; x < s.w; x++) {
       const ch = row[x] ?? ".";
       if (ch === ".") continue;
       const color = s.palette[ch];
-      if (!color) continue;
+      if (!color || color === "transparent") continue;
       ctx.fillStyle = color;
-      ctx.fillRect(ox + x * scale, oy + y * scale, scale, scale);
+      const px0 = Math.round(ox + x * scale);
+      const px1 = Math.round(ox + (x + 1) * scale);
+      ctx.fillRect(px0, py0, px1 - px0, py1 - py0);
     }
   }
   if (grid) drawGrid(ctx, ox, oy, s.w, s.h, scale);

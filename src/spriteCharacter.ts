@@ -38,15 +38,15 @@ export class SpriteCharacter extends Character {
     ctx.ellipse(this.pos.x, this.pos.y, w * 0.32, cell * 1.2, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.save();
-    ctx.imageSmoothingEnabled = false;
-    if (this.facing < 0) {
-      // mirror horizontally about the character's x so it faces left
-      ctx.translate(this.pos.x, 0);
-      ctx.scale(-1, 1);
-      ctx.translate(-this.pos.x, 0);
-    }
-    drawSprite(ctx, sprite, ox, oy, cell);
-    ctx.restore();
+    // Facing left: mirror the sprite DATA (reverse each row) rather than using a
+    // canvas transform. A negative-scale transform around a fractional x reopens
+    // the same sub-pixel seams we just closed; flipping the data keeps the
+    // boundary-rounded blit exact.
+    const frame = this.facing < 0 ? mirror(sprite) : sprite;
+    drawSprite(ctx, frame, ox, oy, cell);
   }
+}
+
+function mirror(s: PixelSprite): PixelSprite {
+  return { w: s.w, h: s.h, palette: s.palette, rows: s.rows.map((r) => [...r].reverse().join("")) };
 }
