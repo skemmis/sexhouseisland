@@ -1,4 +1,5 @@
-import { Character } from "./character";
+import { SpriteCharacter } from "./spriteCharacter";
+import { PLAYER_WALK } from "./game/playerWalk";
 import {
   interact, newGame, ROOMS, START_POS, ITEMS,
 } from "./game";
@@ -28,7 +29,9 @@ resize();
 // ---------------------------------------------------------------------------
 type CursorVerb = Verb | "Walk to";
 const state = newGame();
-const player = new Character({ ...START_POS });
+// The player is now a generated pixel-sprite cast member (see game/playerWalk.ts),
+// rendered through the same movement/scaling engine as the procedural figure was.
+const player = new SpriteCharacter({ ...START_POS }, PLAYER_WALK, 2.0, 8);
 
 let currentVerb: CursorVerb = "Walk to";
 let pendingItem: Item | null = null; // the "X" in "Use X on Y"
@@ -285,8 +288,8 @@ function render(t: number) {
     ctx.fillStyle = "rgba(0,0,0,0.7)";
     ctx.fillRect(0, 0, VW, VH);
     ctx.fillStyle = "#f0ecd0";
-    centerText("YOU ESCAPED THE DOCK", VW / 2, 80, 12);
-    centerText("(a 3-step puzzle, but it's a real one)", VW / 2, 98, 6);
+    centerText("YOU GOT INTO THE VILLA", VW / 2, 80, 12);
+    centerText("(the others are still locked out by the pool)", VW / 2, 98, 6);
     centerText("click to play again", VW / 2, 120, 7);
   }
 }

@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "gen": "tsx scripts/generate-sprite.ts"
+    "gen": "tsx scripts/generate-sprite.ts",
+    "gen:walk": "tsx scripts/generate-walk.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0"
