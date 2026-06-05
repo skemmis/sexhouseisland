@@ -12,19 +12,24 @@ import { decodeImage, encodePng, fitResize, toDataUrl } from "./imageproc";
 //  Claude (Anthropic) is text-only and cannot paint these — hence an image API.
 // ============================================================================
 
-const AD =
+const BACKDROP_AD =
   "16-bit pixel-art video-game BACKGROUND, painterly and moody, dusk lighting, " +
   "rich saturated-but-dark palette, bold shapes, in the style of LucasArts' " +
   "The Secret of Monkey Island and Day of the Tentacle. EMPTY SET: no people, no " +
   "characters, no animals, no text. Wide side-on composition. Leave the bottom " +
   "third as flat open ground for characters to walk on.";
 
-async function genOpenAI(prompt: string): Promise<Buffer> {
+const PORTRAIT_AD =
+  "A 16-bit pixel-art CHARACTER PORTRAIT — head and shoulders, like a LucasArts " +
+  "dialogue close-up (The Secret of Monkey Island / Day of the Tentacle). One " +
+  "single character, centered, facing the viewer, expressive cartoon features, " +
+  "bold shapes, moody dusk lighting, on a simple dark plain background. No text.";
+
+async function genOpenAI(full: string, size: string): Promise<Buffer> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error("OPENAI_API_KEY not set");
   const model = process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-1";
-  const size = model === "dall-e-3" ? "1792x1024" : "1536x1024";
-  const body: Record<string, unknown> = { model, prompt: `${AD}\n\nScene: ${prompt}`, size, n: 1 };
+  const body: Record<string, unknown> = { model, prompt: full, size, n: 1 };
   if (model === "dall-e-3") body.response_format = "b64_json";
   const res = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
@@ -36,16 +41,15 @@ async function genOpenAI(prompt: string): Promise<Buffer> {
   return Buffer.from(json.data[0].b64_json, "base64");
 }
 
-async function genReplicate(prompt: string): Promise<Buffer> {
+async function genReplicate(full: string, aspect: string): Promise<Buffer> {
   const key = process.env.REPLICATE_API_TOKEN;
   if (!key) throw new Error("REPLICATE_API_TOKEN not set");
   const model = process.env.REPLICATE_MODEL ?? "black-forest-labs/flux-schnell";
   const headers = { Authorization: `Bearer ${key}`, "Content-Type": "application/json" };
-  // 21:9 ≈ the scene's 2.35:1, so almost no cropping is needed.
   const create = await fetch(`https://api.replicate.com/v1/models/${model}/predictions`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ input: { prompt: `${AD}\n\nScene: ${prompt}`, aspect_ratio: "21:9", output_format: "png", num_outputs: 1 } }),
+    body: JSON.stringify({ input: { prompt: full, aspect_ratio: aspect, output_format: "png", num_outputs: 1 } }),
   });
   if (!create.ok) throw new Error(`Replicate ${create.status}: ${await create.text()}`);
   let pred = await create.json();
@@ -59,7 +63,7 @@ async function genReplicate(prompt: string): Promise<Buffer> {
   return Buffer.from(await (await fetch(url)).arrayBuffer());
 }
 
-async function genGemini(prompt: string): Promise<Buffer> {
+async function genGemini(full: string, aspect: string): Promise<Buffer> {
   const key = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY not set");
   // Default to the latest standard "nano banana" (Nano Banana 2). For the
@@ -67,8 +71,6 @@ async function genGemini(prompt: string): Promise<Buffer> {
   // Imagen models use a different ":predict" endpoint (handled below).
   const model = process.env.GEMINI_IMAGE_MODEL ?? "gemini-3.1-flash-image";
   const ver = process.env.GEMINI_API_VERSION ?? "v1beta";
-  const aspect = process.env.GEMINI_ASPECT ?? "21:9"; // ≈ the scene's 2.35:1
-  const full = `${AD}\n\nScene: ${prompt}`;
 
   if (model.includes("imagen")) {
     const res = await fetch(`https://generativelanguage.googleapis.com/${ver}/models/${model}:predict`, {
@@ -91,7 +93,7 @@ async function genGemini(prompt: string): Promise<Buffer> {
     return fetch(url, {
       method: "POST",
       headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts: [{ text: withAspect ? full : `${full}\n\nWide panoramic 21:9 composition.` }] }], generationConfig }),
+      body: JSON.stringify({ contents: [{ parts: [{ text: withAspect ? full : `${full}\n\nAspect ratio ${aspect}.` }] }], generationConfig }),
     });
   };
   let res = await call(true);
@@ -116,30 +118,33 @@ function arg(flag: string, def?: string) {
 async function main() {
   const prompt = process.argv.slice(2).filter((a) => !a.startsWith("--") && process.argv[process.argv.indexOf(a) - 1]?.startsWith("--") !== true).join(" ").trim();
   const provider = (arg("--provider", process.env.BG_PROVIDER) ?? "openai").toLowerCase();
-  const w = +(arg("--w", "320")!), h = +(arg("--h", "136")!);
+  const kind = (arg("--kind", "backdrop") ?? "backdrop").toLowerCase();
+  const portrait = kind === "portrait";
+  const w = +(arg("--w", portrait ? "64" : "320")!), h = +(arg("--h", portrait ? "64" : "136")!);
+  const aspect = arg("--aspect", process.env.GEMINI_ASPECT) ?? (portrait ? "1:1" : "21:9");
   const modulePath = arg("--module", "src/game/poolDeckBg.ts")!;
   const varName = arg("--var", "POOL_DECK_BG")!;
-  if (!prompt) { console.error('Usage: npm run gen:bg -- "<scene description>"  (set BG_PROVIDER + key)'); process.exit(1); }
+  const stem = modulePath.split("/").pop()!.replace(/\.ts$/, "");
+  if (!prompt) { console.error('Usage: npm run gen:bg -- "<description>" [--kind portrait] [--provider gemini]'); process.exit(1); }
 
-  console.log(`Generating backdrop via ${provider} …`);
+  const full = `${portrait ? PORTRAIT_AD : BACKDROP_AD}\n\n${portrait ? "Character" : "Scene"}: ${prompt}`;
+  console.log(`Generating ${kind} via ${provider} …`);
   const raw =
-    provider === "replicate" ? await genReplicate(prompt)
-    : provider === "gemini" ? await genGemini(prompt)
-    : await genOpenAI(prompt);
+    provider === "replicate" ? await genReplicate(full, aspect)
+    : provider === "gemini" ? await genGemini(full, aspect)
+    : await genOpenAI(full, portrait ? "1024x1024" : "1536x1024");
 
-  writeFileSync("generated/poolDeck-bg.raw", raw); // keep the original for reference
-  const src = decodeImage(raw);
-  const small = fitResize(src, w, h);
+  writeFileSync(`generated/${stem}.raw`, raw); // keep the original for reference
+  const small = fitResize(decodeImage(raw), w, h);
   const png = encodePng(small);
-  writeFileSync("generated/poolDeck-bg.png", png); // preview
+  writeFileSync(`generated/${stem}.png`, png); // preview
   writeFileSync(
     modulePath,
-    `// Painted backdrop generated by \`npm run gen:bg\` (${provider}) and downscaled\n` +
-      `// to ${w}x${h} to match sprite resolution. Static SET only — gameplay objects\n` +
-      `// (pelican, skimmer, key glint, open-door glow) are engine overlays.\n` +
+    `// ${portrait ? "Painted dialogue portrait" : "Painted backdrop"} generated by ` +
+      `\`npm run gen:bg\` (${provider}), downscaled to ${w}x${h}.\n` +
       `export const ${varName} = "${toDataUrl(png)}";\n`,
   );
-  console.log(`\n✓ backdrop: source ${src.w}x${src.h} -> ${w}x${h}\n  generated/poolDeck-bg.png (preview)\n  ${modulePath} (baked)`);
+  console.log(`\n✓ ${kind}: ${w}x${h}\n  generated/${stem}.png (preview)\n  ${modulePath} (baked)`);
 }
 
 main();

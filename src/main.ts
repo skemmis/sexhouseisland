@@ -1,8 +1,10 @@
 import { SpriteCharacter } from "./spriteCharacter";
 import { drawSprite } from "./pixels/render";
-import { drawText, textWidth, GLYPH_H } from "./pixelfont";
+import { drawText, textWidth, GLYPH_H, GLYPH_W } from "./pixelfont";
 import { PLAYER_WALK } from "./game/playerWalk";
 import { PLAYER_PORTRAIT } from "./game/playerPortrait";
+import { PLAYER_PORTRAIT_IMG } from "./game/playerPortraitImg";
+import { makeBackdrop, drawBackdrop } from "./background";
 import {
   interact, newGame, ROOMS, START_POS, ITEMS,
 } from "./game";
@@ -255,14 +257,9 @@ function update(dt: number) {
   const room = ROOMS[state.currentRoom];
   player.update(dt, room);
 
-  // advance speech
-  if (speechQueue.length > 0) {
-    player.talking = true;
-    speechQueue[0].time -= dt;
-    if (speechQueue[0].time <= 0) speechQueue.shift();
-  } else {
-    player.talking = false;
-  }
+  // speech stays on screen until the player clicks to advance (set in the
+  // click handler) — no auto-dismiss timer.
+  player.talking = speechQueue.length > 0;
 }
 
 function render(t: number) {
@@ -273,14 +270,7 @@ function render(t: number) {
   room.paint(ctx, t, state);
   player.draw(ctx, room);
 
-  // hotspot hover outline (debug-y but helpful while authoring)
-  const hs = hotspotAt(mouse.x, mouse.y);
-  if (hs && !dialogue && !state.won) {
-    ctx.strokeStyle = "rgba(255,255,255,0.25)";
-    ctx.strokeRect(hs.rect.x + 0.5, hs.rect.y + 0.5, hs.rect.w - 1, hs.rect.h - 1);
-  }
-
-  // speech bubbles
+  // speech (word-wrapped, stays until click)
   for (const sp of speechQueue.slice(0, 1)) drawSpeech(sp.text, sp.at.x, sp.at.y);
 
   // dialogue portrait — the speaker's generated face, with lip-sync
@@ -367,28 +357,57 @@ function centerText(s: string, cx: number, y: number, size: number) {
   drawText(ctx, s, cx - w / 2, y - GLYPH_H * scale, ctx.fillStyle as string, scale);
 }
 
-// SCUMM-style dialogue portrait box, bottom-left of the scene, with lip-sync.
+// SCUMM-style dialogue portrait box, bottom-left of the scene. Prefers the
+// Gemini-painted portrait; falls back to the PixelBench portrait (with lip-sync)
+// if none is baked in.
+const playerFace = makeBackdrop(PLAYER_PORTRAIT_IMG);
 function drawPortrait(t: number) {
-  const scale = 2.4;
-  const size = 24 * scale;
+  const size = 58;
   const px = 4;
   const py = SCENE_H - size - 4;
   ctx.fillStyle = "#0c0c12";
   ctx.fillRect(px - 2, py - 2, size + 4, size + 4);
   ctx.strokeStyle = "#caa54a";
   ctx.strokeRect(px - 1.5, py - 1.5, size + 3, size + 3);
-  ctx.imageSmoothingEnabled = false;
-  const face = Math.sin(t * 16) > 0 ? PLAYER_PORTRAIT.talking : PLAYER_PORTRAIT.neutral;
-  drawSprite(ctx, face, px, py, scale);
+  if (!drawBackdrop(ctx, playerFace, px, py, size, size)) {
+    ctx.imageSmoothingEnabled = false;
+    const scale = size / 24;
+    const face = Math.sin(t * 16) > 0 ? PLAYER_PORTRAIT.talking : PLAYER_PORTRAIT.neutral;
+    drawSprite(ctx, face, px, py, scale);
+  }
+}
+
+// Greedy word-wrap to a max character count per line.
+function wrapText(s: string, maxChars: number): string[] {
+  const lines: string[] = [];
+  let cur = "";
+  for (const word of s.split(/\s+/)) {
+    if (!cur) cur = word;
+    else if ((cur + " " + word).length <= maxChars) cur += " " + word;
+    else { lines.push(cur); cur = word; }
+  }
+  if (cur) lines.push(cur);
+  return lines;
 }
 
 function drawSpeech(s: string, x: number, y: number) {
-  const w = textWidth(s, 1);
-  const px = clamp(Math.round(x - w / 2), 3, VW - w - 3);
-  const py = clamp(Math.round(y - 8), 3, SCENE_H - GLYPH_H - 3);
-  ctx.fillStyle = "rgba(0,0,0,0.75)";
-  ctx.fillRect(px - 2, py - 2, w + 4, GLYPH_H + 4);
-  drawText(ctx, s, px, py, "#ffffff", 1);
+  const margin = 8;
+  const maxChars = Math.floor((VW - margin * 2) / (GLYPH_W + 1));
+  const lines = wrapText(s, maxChars);
+  const lineH = GLYPH_H + 2;
+  const blockW = Math.max(...lines.map((l) => textWidth(l, 1)));
+  const blockH = lines.length * lineH;
+
+  // anchor centered above the speaker, clamped to the scene
+  let bx = clamp(Math.round(x - blockW / 2), 3, VW - blockW - 3);
+  let by = clamp(Math.round(y - blockH), 3, SCENE_H - blockH - 3);
+
+  ctx.fillStyle = "rgba(0,0,0,0.78)";
+  ctx.fillRect(bx - 3, by - 2, blockW + 6, blockH + 3);
+  for (let i = 0; i < lines.length; i++) {
+    const lw = textWidth(lines[i], 1);
+    drawText(ctx, lines[i], Math.round(bx + (blockW - lw) / 2), by + i * lineH, "#ffffff", 1);
+  }
 }
 
 // procedural inventory icons — replace with sprite atlas in production
