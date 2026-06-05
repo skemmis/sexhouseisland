@@ -1,6 +1,41 @@
-// Mike's cannonball (tucked) pose — picked via the variant picker and baked in.
-// Placeholder re-uses the standing sprite until a cannonball variant is chosen.
+// Picked variant 4 of "miketuck" (PixelBench sprite, template: cannonball).
 import type { PixelSprite } from "../pixels/sprite";
-import { MIKE_SPRITE } from "./mikeSprite";
 
-export const MIKE_TUCK: PixelSprite = MIKE_SPRITE;
+export const MIKE_TUCK: PixelSprite = {
+  "w": 16,
+  "h": 16,
+  "rows": [
+    "................",
+    "................",
+    "......1761......",
+    ".....177661.....",
+    "....17422281....",
+    "....14b22b21....",
+    "....14222231....",
+    "...1422222331...",
+    "..1422aaac2231..",
+    "..142aaaacc231..",
+    "..1422aacc2231..",
+    "...1422222331...",
+    "....121..121....",
+    "....21....12....",
+    "................",
+    "................"
+  ],
+  "palette": {
+    "1": "#170f22",
+    "2": "#c47a4e",
+    "3": "#8a4f4a",
+    "4": "#e6a86a",
+    "5": "#2a1c22",
+    "6": "#7a5230",
+    "7": "#caa54a",
+    "8": "#2b2b3a",
+    "9": "#c0556f",
+    ".": "transparent",
+    "b": "#170f22",
+    "a": "#3f7d80",
+    "c": "#2d2c46",
+    "d": "#8a4f4a"
+  }
+};
