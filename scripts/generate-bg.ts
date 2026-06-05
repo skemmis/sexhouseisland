@@ -62,21 +62,48 @@ async function genReplicate(prompt: string): Promise<Buffer> {
 async function genGemini(prompt: string): Promise<Buffer> {
   const key = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY not set");
-  const model = process.env.GEMINI_IMAGE_MODEL ?? "imagen-4.0-generate-001";
-  const aspect = process.env.GEMINI_ASPECT ?? "16:9"; // widest Imagen offers; we crop to the scene
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:predict`, {
-    method: "POST",
-    headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      instances: [{ prompt: `${AD}\n\nScene: ${prompt}` }],
-      parameters: { sampleCount: 1, aspectRatio: aspect },
-    }),
-  });
+  // Default to "nano banana" (native Gemini image model). Imagen models use a
+  // different ":predict" endpoint, handled below when the id contains "imagen".
+  const model = process.env.GEMINI_IMAGE_MODEL ?? "gemini-2.5-flash-image";
+  const ver = process.env.GEMINI_API_VERSION ?? "v1beta";
+  const aspect = process.env.GEMINI_ASPECT ?? "21:9"; // ≈ the scene's 2.35:1
+  const full = `${AD}\n\nScene: ${prompt}`;
+
+  if (model.includes("imagen")) {
+    const res = await fetch(`https://generativelanguage.googleapis.com/${ver}/models/${model}:predict`, {
+      method: "POST",
+      headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ instances: [{ prompt: full }], parameters: { sampleCount: 1, aspectRatio: aspect === "21:9" ? "16:9" : aspect } }),
+    });
+    if (!res.ok) throw new Error(`Imagen ${res.status}: ${await res.text()}`);
+    const p = (await res.json()).predictions?.[0];
+    const b64 = p?.bytesBase64Encoded ?? p?.image?.imageBytes;
+    if (!b64) throw new Error("Imagen returned no image");
+    return Buffer.from(b64, "base64");
+  }
+
+  // Native image model (nano banana): generateContent with an IMAGE modality.
+  const url = `https://generativelanguage.googleapis.com/${ver}/models/${model}:generateContent`;
+  const call = (withAspect: boolean) => {
+    const generationConfig: Record<string, unknown> = { responseModalities: ["TEXT", "IMAGE"] };
+    if (withAspect) generationConfig.imageConfig = { aspectRatio: aspect };
+    return fetch(url, {
+      method: "POST",
+      headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ parts: [{ text: withAspect ? full : `${full}\n\nWide panoramic 21:9 composition.` }] }], generationConfig }),
+    });
+  };
+  let res = await call(true);
+  if (!res.ok) {
+    const t = await res.text();
+    if (/imageconfig|aspect|unknown|invalid|modal/i.test(t)) res = await call(false); // tolerate API-shape drift
+    else throw new Error(`Gemini ${res.status}: ${t}`);
+  }
   if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
-  const json = await res.json();
-  const p = json.predictions?.[0];
-  const b64 = p?.bytesBase64Encoded ?? p?.image?.imageBytes;
-  if (!b64) throw new Error(`Gemini returned no image: ${JSON.stringify(json).slice(0, 200)}`);
+  const parts = (await res.json()).candidates?.[0]?.content?.parts ?? [];
+  const img = parts.find((p: any) => p?.inlineData?.data ?? p?.inline_data?.data);
+  const b64 = img?.inlineData?.data ?? img?.inline_data?.data;
+  if (!b64) throw new Error("Gemini returned no image part");
   return Buffer.from(b64, "base64");
 }
 
