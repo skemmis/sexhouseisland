@@ -21,7 +21,7 @@ import type { FillContext, Filler } from "./fillers";
 export type Completion = (prompt: string) => Promise<string> | string;
 
 /** Turn a template + style into the text prompt a model fills. */
-export function serializeTask(t: SpriteTemplate, style: string): string {
+export function serializeTask(t: SpriteTemplate, style: string, example?: PixelSprite): string {
   const palLines = Object.entries(t.palette)
     .filter(([c]) => c !== ".")
     .map(([c, hex]) => `  '${c}' = ${hex}`)
@@ -29,6 +29,18 @@ export function serializeTask(t: SpriteTemplate, style: string): string {
   const zoneLines = Object.entries(t.allow)
     .map(([z, chars]) => `  zone '${z}': use only [${chars.join(" ")}]`)
     .join("\n");
+
+  // Few-shot: a single worked example of a good fill on this same template is
+  // the cheapest, highest-leverage quality boost — it shows the model what
+  // "good shading within zones" looks like rather than just describing it.
+  const exampleBlock = example
+    ? [
+        ``,
+        `EXAMPLE of a good fill for THIS zone map (different character, same grid):`,
+        ...example.rows,
+        ``,
+      ]
+    : [];
 
   return [
     `You are a pixel-sprite filler. Fill a ${t.w}x${t.h} grid.`,
@@ -44,7 +56,7 @@ export function serializeTask(t: SpriteTemplate, style: string): string {
     ``,
     `ZONE MAP (${t.w} chars per line, ${t.h} lines; '.' = empty):`,
     ...t.regions,
-    ``,
+    ...exampleBlock,
     `Return ONLY the filled grid: ${t.h} lines of exactly ${t.w} chars each.`,
     `Keep '.' exactly where the zone map has '.'. Light comes from top-left:`,
     `use lighter palette colors on top/left faces, darker on bottom/right, and`,
@@ -82,10 +94,11 @@ export class LlmGridFiller implements Filler {
     private complete: Completion,
     private style: string,
     private maxTries = 3,
+    private example?: PixelSprite,
   ) {}
 
   async fill(template: SpriteTemplate, ctx: FillContext): Promise<PixelSprite> {
-    const base = serializeTask(template, this.style);
+    const base = serializeTask(template, this.style, this.example);
     let prompt = base;
     if (ctx.prev) prompt += `\n\nPREVIOUS FRAME (stay consistent with it):\n${ctx.prev.rows.join("\n")}`;
 
