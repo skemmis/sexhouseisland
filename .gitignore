@@ -5,3 +5,4 @@ dist/
 
 # generated sprite outputs (reproducible via npm run gen)
 generated/
+dist-single/

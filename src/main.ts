@@ -1,5 +1,7 @@
 import { SpriteCharacter } from "./spriteCharacter";
+import { drawSprite } from "./pixels/render";
 import { PLAYER_WALK } from "./game/playerWalk";
+import { PLAYER_PORTRAIT } from "./game/playerPortrait";
 import {
   interact, newGame, ROOMS, START_POS, ITEMS,
 } from "./game";
@@ -38,7 +40,7 @@ let pendingItem: Item | null = null; // the "X" in "Use X on Y"
 let hover = { hotspot: "", item: "", verb: "" };
 
 // speech bubbles (queued)
-type Speech = { text: string; at: { x: number; y: number }; time: number };
+type Speech = { text: string; at: { x: number; y: number }; time: number; speaker: "player" | "npc" };
 let speechQueue: Speech[] = [];
 
 // active conversation
@@ -99,9 +101,9 @@ function hotspotAt(x: number, y: number) {
 // ---------------------------------------------------------------------------
 //  Speech helpers
 // ---------------------------------------------------------------------------
-function say(lines: string[], at: { x: number; y: number }) {
+function say(lines: string[], at: { x: number; y: number }, speaker: "player" | "npc" = "player") {
   for (const text of lines)
-    speechQueue.push({ text, at, time: Math.max(1.1, text.length * 0.045) });
+    speechQueue.push({ text, at, time: Math.max(1.1, text.length * 0.045), speaker });
 }
 
 function playerSpeechPos() {
@@ -128,7 +130,7 @@ function showDialogueNode() {
   const at = parrot
     ? { x: parrot.rect.x + parrot.rect.w / 2, y: parrot.rect.y - 6 }
     : playerSpeechPos();
-  say(node.npc, at);
+  say(node.npc, at, "npc");
 }
 
 function clickInScene(p: { x: number; y: number }) {
@@ -280,6 +282,9 @@ function render(t: number) {
   // speech bubbles
   for (const sp of speechQueue.slice(0, 1)) drawSpeech(sp.text, sp.at.x, sp.at.y);
 
+  // dialogue portrait — the speaker's generated face, with lip-sync
+  if (speechQueue[0]?.speaker === "player") drawPortrait(t);
+
   // UI strip
   drawUI();
 
@@ -358,6 +363,21 @@ function centerText(s: string, cx: number, y: number, size: number) {
   ctx.textAlign = "center";
   ctx.fillText(s, cx, y);
   ctx.textAlign = "left";
+}
+
+// SCUMM-style dialogue portrait box, bottom-left of the scene, with lip-sync.
+function drawPortrait(t: number) {
+  const scale = 2.4;
+  const size = 24 * scale;
+  const px = 4;
+  const py = SCENE_H - size - 4;
+  ctx.fillStyle = "#0c0c12";
+  ctx.fillRect(px - 2, py - 2, size + 4, size + 4);
+  ctx.strokeStyle = "#caa54a";
+  ctx.strokeRect(px - 1.5, py - 1.5, size + 3, size + 3);
+  ctx.imageSmoothingEnabled = false;
+  const face = Math.sin(t * 16) > 0 ? PLAYER_PORTRAIT.talking : PLAYER_PORTRAIT.neutral;
+  drawSprite(ctx, face, px, py, scale);
 }
 
 function drawSpeech(s: string, x: number, y: number) {
