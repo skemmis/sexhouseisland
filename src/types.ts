@@ -1,0 +1,85 @@
+// Core data model for the adventure engine.
+// Everything the game "is" — rooms, hotspots, items, dialogue — is plain data.
+// The engine (main.ts) interprets this data; the game (game.ts) authors it.
+
+export type Vec = { x: number; y: number };
+
+/** The nine classic SCUMM verbs. */
+export type Verb =
+  | "Give"
+  | "Open"
+  | "Close"
+  | "Pick up"
+  | "Look at"
+  | "Talk to"
+  | "Use"
+  | "Push"
+  | "Pull";
+
+export const VERBS: Verb[] = [
+  "Give", "Open", "Close",
+  "Pick up", "Look at", "Talk to",
+  "Use", "Push", "Pull",
+];
+
+/** A clickable region in a room. Rectangular for the slice; swap for polygons later. */
+export interface Hotspot {
+  id: string;
+  name: string;            // shown in the sentence line ("Look at  door")
+  rect: { x: number; y: number; w: number; h: number };
+  /** Where the player should stand to interact with it. */
+  walkTo: Vec;
+  /** Optional facing direction once arrived: -1 left, 1 right, 0 toward camera. */
+  face?: number;
+}
+
+/** An inventory item. `icon` is drawn procedurally for now (see render.ts). */
+export interface Item {
+  id: string;
+  name: string;
+  icon: string; // a key into the procedural icon drawer
+}
+
+/** A single line of dialogue or a branch in a conversation. */
+export interface DialogueNode {
+  /** Lines the NPC says when this node is entered. */
+  npc: string[];
+  /** Player response options. Empty = conversation ends after npc lines. */
+  choices?: { text: string; goto: string }[];
+}
+
+export interface Dialogue {
+  start: string;
+  nodes: Record<string, DialogueNode>;
+}
+
+/** A room: a backdrop, a walkable floor band, hotspots, and characters. */
+export interface Room {
+  id: string;
+  /** Floor band for walking + depth scaling. minY = far edge, maxY = near edge. */
+  floor: { minY: number; maxY: number; minScale: number; maxScale: number };
+  hotspots: Hotspot[];
+  /** Draws the painted backdrop. Replace with a loaded image in production. */
+  paint: (ctx: CanvasRenderingContext2D, t: number, state: GameState) => void;
+}
+
+/** Mutable world state — the save game, essentially. */
+export interface GameState {
+  flags: Record<string, boolean>;
+  inventory: Item[];
+  currentRoom: string;
+  won: boolean;
+}
+
+/**
+ * The result of an interaction: what the game logic decides should happen
+ * when the player performs `verb` on `target` (optionally with `withItem`).
+ */
+export interface ActionResult {
+  /** Line(s) the player character says. */
+  say?: string[];
+  /** Mutate world state (set flags, add/remove items). */
+  effect?: (state: GameState) => void;
+  /** Start a conversation. */
+  dialogue?: Dialogue;
+}
