@@ -1,5 +1,8 @@
 import { SpriteCharacter } from "./spriteCharacter";
 import { drawSprite } from "./pixels/render";
+import { Cutscene, arc } from "./cutscene";
+import { MIKE_SPRITE } from "./game/mikeSprite";
+import { MIKE_TUCK } from "./game/mikeTuck";
 import { drawText, textWidth, GLYPH_H, GLYPH_W } from "./pixelfont";
 import { PLAYER_WALK } from "./game/playerWalk";
 import { PLAYER_PORTRAIT } from "./game/playerPortrait";
@@ -200,6 +203,8 @@ canvas.addEventListener("click", (e) => {
   if (state.won && speechQueue.length === 0) {
     Object.assign(state, newGame());
     player.pos = { ...START_POS };
+    mikeCut = null;
+    mikeAnim.active = false;
     resetVerb();
     return;
   }
@@ -269,9 +274,66 @@ function frame(now: number) {
   requestAnimationFrame(frame);
 }
 
+// --- Mike's dive cutscene ---------------------------------------------------
+type MikeAnim = { active: boolean; pose: "stand" | "tuck" | "hidden"; cx: number; cy: number; scale: number; rot: number; sx: number; sy: number; splash: number };
+const mikeAnim: MikeAnim = { active: false, pose: "stand", cx: 0, cy: 0, scale: 1.7, rot: 0, sx: 1, sy: 1, splash: 0 };
+let mikeCut: Cutscene | null = null;
+
+function startMikeJump(): Cutscene {
+  const start = { x: 278, y: 100 }; // centre of the static Mike (drawn at 265,80,1.7)
+  const water = { x: 165, y: 98 };  // the deep end
+  return new Cutscene([
+    // wind-up crouch (squash the standing pose)
+    { d: 0.35, on() { mikeAnim.active = true; mikeAnim.pose = "stand"; mikeAnim.splash = 0; mikeAnim.rot = 0; },
+      tween(k) { mikeAnim.cx = start.x; mikeAnim.cy = start.y + 5 * k; mikeAnim.scale = 1.7; mikeAnim.sx = 1 + 0.25 * k; mikeAnim.sy = 1 - 0.3 * k; } },
+    // the leap: arc to the water, tuck + spin, shrinking with distance
+    { d: 0.85, on() { mikeAnim.pose = "tuck"; mikeAnim.sx = 1; mikeAnim.sy = 1; },
+      tween(k) { const p = arc(start, water, 48, k); mikeAnim.cx = p.x; mikeAnim.cy = p.y; mikeAnim.scale = 1.7 - 0.95 * k; mikeAnim.rot = -k * Math.PI * 2.4; } },
+    // splash; he's gone for good
+    { d: 0.7, on() { state.flags.mikeGone = true; mikeAnim.pose = "hidden"; },
+      tween(k) { mikeAnim.splash = k; } },
+    { d: 0.01, on() { mikeAnim.active = false; mikeAnim.splash = 0; } },
+  ]);
+}
+
+function drawSpriteT(sp: typeof MIKE_SPRITE, cx: number, cy: number, scale: number, rot: number, sx: number, sy: number) {
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.scale(scale * sx, scale * sy);
+  drawSprite(ctx, sp, -sp.w / 2, -sp.h / 2, 1);
+  ctx.restore();
+}
+
+function drawSplash(x: number, y: number, k: number) {
+  ctx.save();
+  const r = 3 + k * 20, a = 1 - k;
+  ctx.strokeStyle = `rgba(180,220,230,${a})`;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.4, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(x, y, r * 0.55, r * 0.22, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = `rgba(210,235,240,${a})`;
+  for (const d of [-0.7, -0.25, 0.25, 0.7]) {
+    const dx = x + Math.sin(d) * r, dy = y - Math.cos(d) * 9 * Math.sin(Math.PI * Math.min(1, k * 1.4));
+    ctx.fillRect(Math.round(dx), Math.round(dy), 1, 2);
+  }
+  ctx.restore();
+}
+
+function drawMikeJump() {
+  if (!mikeAnim.active) return;
+  if (mikeAnim.pose !== "hidden") drawSpriteT(mikeAnim.pose === "tuck" ? MIKE_TUCK : MIKE_SPRITE, mikeAnim.cx, mikeAnim.cy, mikeAnim.scale, mikeAnim.rot, mikeAnim.sx, mikeAnim.sy);
+  if (mikeAnim.splash > 0) drawSplash(165, 100, mikeAnim.splash);
+}
+
 function update(dt: number) {
   const room = ROOMS[state.currentRoom];
   player.update(dt, room);
+
+  // trigger + advance Mike's scripted dive
+  if (state.flags.mikeJumping && !state.flags.mikeGone && !mikeCut) mikeCut = startMikeJump();
+  if (mikeCut && !mikeCut.done) mikeCut.update(dt);
 
   // speech stays on screen until the player clicks to advance (set in the
   // click handler) — no auto-dismiss timer.
@@ -285,6 +347,7 @@ function render(t: number) {
   // scene
   room.paint(ctx, t, state);
   player.draw(ctx, room);
+  drawMikeJump(); // scripted dive, drawn over the scene
 
   // speech (word-wrapped, stays until click)
   for (const sp of speechQueue.slice(0, 1)) drawSpeech(sp.text, sp.at.x, sp.at.y);

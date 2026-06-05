@@ -217,7 +217,7 @@ export function interact(
               },
               jump: {
                 npc: ["Only one way to find out!", "CANNONBALL!", "*SPLOOOSH*", "...", "..."],
-                effect: (s) => { s.flags.mikeGone = true; },
+                effect: (s) => { s.flags.mikeJumping = true; }, // engine plays the dive cutscene, then sets mikeGone
               },
             },
           },
@@ -314,8 +314,9 @@ function paintProceduralSet(ctx: CanvasRenderingContext2D, t: number) {
 function paintOverlays(ctx: CanvasRenderingContext2D, _t: number, state: GameState) {
   drawSprite(ctx, PELICAN_SPRITE, 48, 102, 1.8); // on the front deck, foreground
 
-  // Mike White, lounging by the pool — until he proves the deep end has no bottom
-  if (!state.flags.mikeGone) drawSprite(ctx, MIKE_SPRITE, 265, 80, 1.7);
+  // Mike White, lounging by the pool — hidden once he's gone, or while the
+  // dive cutscene is animating him (the engine draws the diving Mike then).
+  if (!state.flags.mikeGone && !state.flags.mikeJumping) drawSprite(ctx, MIKE_SPRITE, 265, 80, 1.7);
 
   if (!state.flags.gotRod) {
     ctx.strokeStyle = "#9aa3ad";

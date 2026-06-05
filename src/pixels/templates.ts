@@ -287,6 +287,42 @@ const WHEELCHAIR: SpriteTemplate = {
 };
 
 // ---------------------------------------------------------------------------
+//  POSE SILHOUETTE: CANNONBALL  (a body tucked into a ball, mid-dive) — used
+//  for scripted jump animations. Same swimsuit palette/zones as the standing
+//  body so a character's cannonball reads as the same person.
+// ---------------------------------------------------------------------------
+const CANNONBALL: SpriteTemplate = {
+  w: 16,
+  h: 16,
+  palette: SWIMSUIT_PALETTE,
+  regions: [
+    "................",
+    "................",
+    "......HHHH......",
+    ".....HHHHHH.....",
+    "....HHSSSSHH....",
+    "....HSESSESH....", // eyes
+    "....SSSSSSSS....", // hunched neck/shoulders
+    "...SSSSSSSSSS...",
+    "..SSSSWWWWSSSS..", // arms wrap; trunks band across the tuck
+    "..SSSWWWWWWSSS..",
+    "..SSSSWWWWSSSS..",
+    "...SSSSSSSSSS...", // underside of the ball
+    "....SSS..SSS....", // tucked feet / toes
+    "....SS....SS....",
+    "................",
+    "................",
+  ],
+  allow: {
+    O: ["1"],
+    S: ["2", "3", "4", "1"],
+    H: ["5", "6", "7", "8", "1"],
+    E: ["b", "2"],
+    W: ["9", "a", "c", "d", "1"],
+  },
+};
+
+// ---------------------------------------------------------------------------
 //  REGISTRY — what `npm run gen --template <name>` selects from.
 // ---------------------------------------------------------------------------
 export const TEMPLATES: Record<string, TemplateEntry> = {
@@ -325,6 +361,11 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
     label: "front-facing pelican",
     template: PELICAN,
     defaultChoice: { D: "w", E: "k", P: "o", G: "g", F: "o" },
+  },
+  cannonball: {
+    label: "body tucked into a cannonball (mid-dive)",
+    template: CANNONBALL,
+    defaultChoice: { O: "1", S: "2", E: "b", H: "6", W: "a" },
   },
 };
 
