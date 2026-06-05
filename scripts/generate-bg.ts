@@ -59,6 +59,27 @@ async function genReplicate(prompt: string): Promise<Buffer> {
   return Buffer.from(await (await fetch(url)).arrayBuffer());
 }
 
+async function genGemini(prompt: string): Promise<Buffer> {
+  const key = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY not set");
+  const model = process.env.GEMINI_IMAGE_MODEL ?? "imagen-4.0-generate-001";
+  const aspect = process.env.GEMINI_ASPECT ?? "16:9"; // widest Imagen offers; we crop to the scene
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:predict`, {
+    method: "POST",
+    headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      instances: [{ prompt: `${AD}\n\nScene: ${prompt}` }],
+      parameters: { sampleCount: 1, aspectRatio: aspect },
+    }),
+  });
+  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
+  const json = await res.json();
+  const p = json.predictions?.[0];
+  const b64 = p?.bytesBase64Encoded ?? p?.image?.imageBytes;
+  if (!b64) throw new Error(`Gemini returned no image: ${JSON.stringify(json).slice(0, 200)}`);
+  return Buffer.from(b64, "base64");
+}
+
 function arg(flag: string, def?: string) {
   const i = process.argv.indexOf(flag);
   return i >= 0 ? process.argv[i + 1] : def;
@@ -73,7 +94,10 @@ async function main() {
   if (!prompt) { console.error('Usage: npm run gen:bg -- "<scene description>"  (set BG_PROVIDER + key)'); process.exit(1); }
 
   console.log(`Generating backdrop via ${provider} …`);
-  const raw = provider === "replicate" ? await genReplicate(prompt) : await genOpenAI(prompt);
+  const raw =
+    provider === "replicate" ? await genReplicate(prompt)
+    : provider === "gemini" ? await genGemini(prompt)
+    : await genOpenAI(prompt);
 
   const src = decodePng(raw);
   const small = fitResize(src, w, h);
