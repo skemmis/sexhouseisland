@@ -216,8 +216,9 @@ export function interact(
                 ],
               },
               jump: {
-                npc: ["Only one way to find out!", "CANNONBALL!", "*SPLOOOSH*", "...", "..."],
-                effect: (s) => { s.flags.mikeJumping = true; }, // engine plays the dive cutscene, then sets mikeGone
+                npc: ["Wait — only one way to find out!", "CANNONBALL!"],
+                // Arm the dive; the engine waits until he's finished talking, then plays it.
+                effect: (s) => { s.flags.mikeJumpPending = true; },
               },
             },
           },

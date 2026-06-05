@@ -290,9 +290,11 @@ function startMikeJump(): Cutscene {
     { d: 0.85, on() { mikeAnim.pose = "tuck"; mikeAnim.sx = 1; mikeAnim.sy = 1; },
       tween(k) { const p = arc(start, water, 48, k); mikeAnim.cx = p.x; mikeAnim.cy = p.y; mikeAnim.scale = 1.7 - 0.95 * k; mikeAnim.rot = -k * Math.PI * 2.4; } },
     // splash; he's gone for good
-    { d: 0.7, on() { state.flags.mikeGone = true; mikeAnim.pose = "hidden"; },
+    { d: 0.9, on() { state.flags.mikeGone = true; mikeAnim.pose = "hidden"; },
       tween(k) { mikeAnim.splash = k; } },
-    { d: 0.01, on() { mikeAnim.active = false; mikeAnim.splash = 0; } },
+    // a beat, then the player reacts
+    { d: 0.6, on() { mikeAnim.active = false; mikeAnim.splash = 0; } },
+    { d: 0.01, on() { say(["...He's not coming back up."], playerSpeechPos(), "player", playerFace); } },
   ]);
 }
 
@@ -331,8 +333,15 @@ function update(dt: number) {
   const room = ROOMS[state.currentRoom];
   player.update(dt, room);
 
-  // trigger + advance Mike's scripted dive
-  if (state.flags.mikeJumping && !state.flags.mikeGone && !mikeCut) mikeCut = startMikeJump();
+  // trigger Mike's dive the moment his last line clears (speech drained, and
+  // either the dialogue has closed or we're on the terminal jump node)
+  const onTerminalNode = !!dialogue && !dialogue.nodes[dialogueNode]?.choices?.length;
+  if (state.flags.mikeJumpPending && speechQueue.length === 0 && (!dialogue || onTerminalNode) && !state.flags.mikeGone && !mikeCut) {
+    dialogue = null; // close the conversation; the dive takes over
+    state.flags.mikeJumpPending = false;
+    state.flags.mikeJumping = true;
+    mikeCut = startMikeJump();
+  }
   if (mikeCut && !mikeCut.done) mikeCut.update(dt);
 
   // speech stays on screen until the player clicks to advance (set in the
