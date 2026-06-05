@@ -69,8 +69,12 @@ export function validateFill(t: SpriteTemplate, s: PixelSprite): ValidationResul
       }
       const allowed = t.allow[zone];
       if (!allowed) { errors.push(`(${x},${y}) unknown zone '${zone}'`); continue; }
-      if (cell === ".") errors.push(`(${x},${y}) zone '${zone}' must be filled but is empty`);
-      else if (!allowed.includes(cell))
+      // A zone whose allowed set includes '.' is "open": the filler may leave it
+      // transparent. This is what enables freeform (blank-canvas) generation
+      // where the model decides the silhouette, not just the shading.
+      if (cell === ".") {
+        if (!allowed.includes(".")) errors.push(`(${x},${y}) zone '${zone}' must be filled but is empty`);
+      } else if (!allowed.includes(cell))
         errors.push(`(${x},${y}) zone '${zone}' got '${cell}', allowed: ${allowed.join("")}`);
     }
   }
@@ -96,6 +100,19 @@ export function flatFill(
       .join(""),
   );
   return { w: t.w, h: t.h, rows, palette: t.palette };
+}
+
+/**
+ * A blank-canvas template: one open zone covering the whole grid, allowing the
+ * full palette plus transparency. The model chooses the entire silhouette — the
+ * pure MineBench "build it from nothing" case, in 2D. Use this for props /
+ * objects; use a derived (silhouette-locked) template for cast members you need
+ * to stay on-model across frames.
+ */
+export function freeformTemplate(w: number, h: number, palette: Palette): SpriteTemplate {
+  const chars = Object.keys(palette).filter((c) => c !== ".");
+  const regions = Array.from({ length: h }, () => "A".repeat(w));
+  return { w, h, regions, palette, allow: { A: [".", ...chars] } };
 }
 
 /**
