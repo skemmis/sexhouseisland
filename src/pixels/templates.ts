@@ -48,13 +48,15 @@ function remapZones(
 //  COSTUME VARIANT: SWIMSUIT  (the all-bathing-suit-all-the-time cast)
 //  Bare torso/arms/legs/feet = skin; the belt band becomes swimwear.
 // ---------------------------------------------------------------------------
+// Skin/outline/accents pulled into the shared WORLD_PALETTE dusk family (see
+// src/art.ts) so bodies read as sunset-lit, matching the painted backdrops.
 const SWIMSUIT_PALETTE: Palette = {
   ".": "transparent",
-  "1": "#14101a", // outline
-  "2": "#e3b07a", "3": "#c8915a", "4": "#f0c89a", // skin / shadow / light
-  "5": "#3a2a18", "6": "#7a5230", "7": "#caa54a", "8": "#2b2b3a", // hair: dk/brn/blonde/blk
-  b: "#1a1a1a", // eye
-  "9": "#c0556f", a: "#3a6ea5", c: "#1f6f5c", d: "#9b3b4a", // swimwear: pink/blue/teal/red
+  "1": "#170f22", // outline (WORLD 1)
+  "2": "#c47a4e", "3": "#8a4f4a", "4": "#e6a86a", // skin: warm key / terracotta shadow / lit
+  "5": "#2a1c22", "6": "#7a5230", "7": "#caa54a", "8": "#2b2b3a", // hair: dk/brn/blonde/blk
+  b: "#170f22", // eye
+  "9": "#c0556f", a: "#3f7d80", c: "#2d2c46", d: "#8a4f4a", // swimwear: pink/teal/deep/terracotta
 };
 export const SWIMSUIT: SpriteTemplate = remapZones(
   HERO_TEMPLATE,
