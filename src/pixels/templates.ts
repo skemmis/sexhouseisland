@@ -323,6 +323,50 @@ const CANNONBALL: SpriteTemplate = {
 };
 
 // ---------------------------------------------------------------------------
+//  COSTUME VARIANT: BIKINI  (a slimmer FEMALE silhouette — narrow shoulders,
+//  bust, cinched waist, hips, bikini top + bottom, shoulder-length hair). The
+//  male swimsuit body read as men; this reads as women.
+// ---------------------------------------------------------------------------
+const BIKINI: SpriteTemplate = {
+  w: 16,
+  h: 24,
+  palette: SWIMSUIT_PALETTE,
+  regions: [
+    "................",
+    "......HHHH......",
+    ".....HHHHHH.....",
+    ".....HSSSSH.....",
+    ".....HESSEH.....", // eyes
+    ".....HSSSSH.....",
+    ".....HSSSSH.....", // hair frames the face
+    "......SSSS......", // neck
+    "....HHSSSSHH....", // narrow shoulders, hair tips
+    "....HSSSSSSH....",
+    "....SSWWWWSS....", // bikini top
+    "....SSWWWWSS....",
+    ".....SSSSSS.....",
+    "......SSSS......", // cinched waist
+    "......SSSS......",
+    ".....SSSSSS.....", // hips
+    ".....SWWWWS.....", // bikini bottom
+    ".....SSSSSS.....",
+    ".....SS..SS.....", // legs
+    ".....SS..SS.....",
+    ".....SS..SS.....",
+    ".....SS..SS.....",
+    ".....SS..SS.....",
+    "....SSS..SSS....", // feet
+  ],
+  allow: {
+    O: ["1"],
+    S: ["2", "3", "4", "1"],
+    H: ["5", "6", "7", "8", "1"],
+    E: ["b", "2"],
+    W: ["9", "a", "c", "d", "1"],
+  },
+};
+
+// ---------------------------------------------------------------------------
 //  REGISTRY — what `npm run gen --template <name>` selects from.
 // ---------------------------------------------------------------------------
 export const TEMPLATES: Record<string, TemplateEntry> = {
@@ -366,6 +410,11 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
     label: "body tucked into a cannonball (mid-dive)",
     template: CANNONBALL,
     defaultChoice: { O: "1", S: "2", E: "b", H: "6", W: "a" },
+  },
+  bikini: {
+    label: "woman in a bikini (slimmer female silhouette)",
+    template: BIKINI,
+    defaultChoice: { O: "1", S: "2", E: "b", H: "5", W: "9" },
   },
 };
 
