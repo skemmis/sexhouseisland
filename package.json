@@ -11,13 +11,16 @@
     "preview": "vite preview",
     "gen": "tsx scripts/generate-sprite.ts",
     "gen:walk": "tsx scripts/generate-walk.ts",
-    "gen:portrait": "tsx scripts/generate-portrait.ts"
+    "gen:portrait": "tsx scripts/generate-portrait.ts",
+    "gen:bg": "tsx scripts/generate-bg.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0"
   },
   "devDependencies": {
     "@types/node": "^22.5.0",
+    "@types/pngjs": "^6.0.5",
+    "pngjs": "^7.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.5.4",
     "vite": "^5.4.2",
