@@ -1,5 +1,5 @@
 import { writeFileSync } from "node:fs";
-import { decodePng, encodePng, fitResize, toDataUrl } from "./imageproc";
+import { decodeImage, encodePng, fitResize, toDataUrl } from "./imageproc";
 
 // ============================================================================
 //  Generate a painted static backdrop via an image-gen API, downscale it to the
@@ -62,9 +62,10 @@ async function genReplicate(prompt: string): Promise<Buffer> {
 async function genGemini(prompt: string): Promise<Buffer> {
   const key = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY not set");
-  // Default to "nano banana" (native Gemini image model). Imagen models use a
-  // different ":predict" endpoint, handled below when the id contains "imagen".
-  const model = process.env.GEMINI_IMAGE_MODEL ?? "gemini-2.5-flash-image";
+  // Default to the latest standard "nano banana" (Nano Banana 2). For the
+  // premium tier set GEMINI_IMAGE_MODEL=gemini-3-pro-image (Nano Banana Pro).
+  // Imagen models use a different ":predict" endpoint (handled below).
+  const model = process.env.GEMINI_IMAGE_MODEL ?? "gemini-3.1-flash-image";
   const ver = process.env.GEMINI_API_VERSION ?? "v1beta";
   const aspect = process.env.GEMINI_ASPECT ?? "21:9"; // ≈ the scene's 2.35:1
   const full = `${AD}\n\nScene: ${prompt}`;
@@ -126,7 +127,8 @@ async function main() {
     : provider === "gemini" ? await genGemini(prompt)
     : await genOpenAI(prompt);
 
-  const src = decodePng(raw);
+  writeFileSync("generated/poolDeck-bg.raw", raw); // keep the original for reference
+  const src = decodeImage(raw);
   const small = fitResize(src, w, h);
   const png = encodePng(small);
   writeFileSync("generated/poolDeck-bg.png", png); // preview

@@ -20,47 +20,47 @@ export const ITEMS: Record<string, Item> = {
   key:  { id: "key",  name: "rusty key",   icon: "key" },
 };
 
-// ---- The one room: the Sex House Island pool deck at dusk. Painted
-//      procedurally; swap `paint` for a loaded backdrop image in production. ----
+// ---- The one room: the Sex House Island pool deck at dusk. Hotspots + floor
+//      band are authored over the painted backdrop (see poolDeckBg). ----
 export const DOCK: Room = {
   id: "dock",
-  // Floor band: characters near the top of the band are "far" (small),
-  // near the bottom are "near" (big). This is the SCUMM depth trick.
-  floor: { minY: 96, maxY: 132, minScale: 0.7, maxScale: 1.15 },
+  // Walkable band = the front deck in front of the pool (the painted pool sits
+  // higher up, so the floor starts below it).
+  floor: { minY: 110, maxY: 132, minScale: 0.78, maxScale: 1.18 },
   hotspots: [
     {
       id: "door",
       name: "villa door",
-      rect: { x: 28, y: 40, w: 34, h: 56 },
-      walkTo: { x: 55, y: 100 },
+      rect: { x: 6, y: 44, w: 30, h: 50 }, // painted door, left wall
+      walkTo: { x: 44, y: 118 },
       face: 0,
     },
     {
       id: "well",
       name: "the deep end",
-      rect: { x: 150, y: 70, w: 44, h: 40 },
-      walkTo: { x: 172, y: 116 },
+      rect: { x: 104, y: 74, w: 116, h: 46 }, // the painted pool, centre
+      walkTo: { x: 150, y: 124 },
       face: 0,
     },
     {
       id: "rod",
       name: "pool skimmer",
-      rect: { x: 250, y: 78, w: 10, h: 40 },
-      walkTo: { x: 250, y: 120 },
-      face: 1,
+      rect: { x: 94, y: 84, w: 16, h: 40 }, // skimmer overlay, leaning at pool's left
+      walkTo: { x: 100, y: 124 },
+      face: 0,
     },
     {
       id: "parrot",
       name: "pelican",
-      rect: { x: 218, y: 50, w: 22, h: 26 },
-      walkTo: { x: 224, y: 122 },
-      face: 1,
+      rect: { x: 44, y: 100, w: 40, h: 32 }, // pelican overlay, front deck
+      walkTo: { x: 66, y: 130 },
+      face: -1,
     },
     {
       id: "sign",
-      name: "the sign",
-      rect: { x: 96, y: 78, w: 22, h: 24 },
-      walkTo: { x: 107, y: 118 },
+      name: "the lantern",
+      rect: { x: 36, y: 26, w: 16, h: 18 }, // the painted lantern by the door
+      walkTo: { x: 44, y: 118 },
       face: 0,
     },
   ],
@@ -186,9 +186,11 @@ export function interact(
       return { say: [`I can't ${verb.toLowerCase()} the key like that.`] };
 
     case "sign":
-      if (verb === "Look at" || verb === "Use" || verb === "Pull")
-        return { say: ['It reads: "SEX HOUSE ISLAND — the show that lets you keep your phone."'] };
-      return { say: [`I can't ${verb.toLowerCase()} the sign.`] };
+      if (verb === "Look at")
+        return { say: ["A wrought-iron lantern by the villa door. Inside, it's warm and dry. Out here, it is not."] };
+      if (verb === "Use" || verb === "Pull")
+        return { say: ["It's bolted to the wall. The producers think of everything."] };
+      return { say: [`I can't ${verb.toLowerCase()} the lantern.`] };
   }
 
   return { say: [`I can't ${verb.toLowerCase()} that.`] };
@@ -264,23 +266,24 @@ function paintProceduralSet(ctx: CanvasRenderingContext2D, t: number) {
   ctx.fillStyle = "#cfc7b4"; ctx.fillRect(244, 100, 30, 2);
 }
 
-// State-dependent objects, drawn over whichever backdrop is in use.
+// State-dependent objects, drawn over the painted backdrop. Positioned to match
+// the painted layout (pelican on the front deck, skimmer at the pool's left).
 function paintOverlays(ctx: CanvasRenderingContext2D, _t: number, state: GameState) {
-  drawSprite(ctx, PELICAN_SPRITE, 214, 48, 1.6);
+  drawSprite(ctx, PELICAN_SPRITE, 48, 102, 1.8); // on the front deck, foreground
 
   if (!state.flags.gotRod) {
     ctx.strokeStyle = "#9aa3ad";
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(252, 116); ctx.lineTo(258, 78); ctx.stroke();
-    ctx.fillStyle = "rgba(180,200,210,0.6)";
-    ctx.fillRect(256, 76, 6, 5); // skimmer net
+    ctx.beginPath(); ctx.moveTo(100, 124); ctx.lineTo(106, 86); ctx.stroke(); // pole
+    ctx.fillStyle = "rgba(190,205,215,0.7)";
+    ctx.fillRect(102, 84, 7, 5); // skimmer net, leaning at the pool's left edge
   }
   if (!state.flags.gotKey) {
-    ctx.fillStyle = "rgba(220,210,150,0.7)";
-    ctx.fillRect(170, 101, 3, 2); // key glint
+    ctx.fillStyle = "rgba(235,225,160,0.8)";
+    ctx.fillRect(150, 100, 3, 2); // key glint in the pool
   }
   if (state.flags.doorOpen) {
-    ctx.fillStyle = "rgba(255,210,120,0.4)";
-    ctx.fillRect(28, 40, 34, 56); // warm light spilling from the open villa
+    ctx.fillStyle = "rgba(255,210,120,0.45)";
+    ctx.fillRect(8, 48, 26, 44); // warm light spilling from the open villa door
   }
 }

@@ -1,4 +1,5 @@
 import { PNG } from "pngjs";
+import jpeg from "jpeg-js";
 import { readFileSync, writeFileSync } from "node:fs";
 
 // Build-time image processing for backdrops: decode a generated PNG, crop it to
@@ -11,6 +12,17 @@ export interface RGBA { w: number; h: number; data: Uint8Array }
 export function decodePng(buf: Buffer): RGBA {
   const png = PNG.sync.read(buf);
   return { w: png.width, h: png.height, data: new Uint8Array(png.data) };
+}
+
+/** Decode PNG or JPEG (image-gen APIs return either) into RGBA. */
+export function decodeImage(buf: Buffer): RGBA {
+  if (buf[0] === 0x89 && buf[1] === 0x50) return decodePng(buf); // PNG
+  if (buf[0] === 0xff && buf[1] === 0xd8) {
+    const j = jpeg.decode(buf, { useTArray: true, formatAsRGBA: true });
+    return { w: j.width, h: j.height, data: new Uint8Array(j.data) };
+  }
+  const magic = [...buf.subarray(0, 4)].map((b) => b.toString(16).padStart(2, "0")).join(" ");
+  throw new Error(`unsupported image format (magic: ${magic})`);
 }
 
 export function encodePng(img: RGBA): Buffer {
