@@ -44,6 +44,7 @@ const player = new SpriteCharacter({ ...START_POS }, PLAYER_WALK, 2.0, 8);
 let currentVerb: CursorVerb = "Walk to";
 let pendingItem: Item | null = null; // the "X" in "Use X on Y"
 let hover = { hotspot: "", item: "", verb: "" };
+let hoveredHotspotId: string | null = null;
 
 // speech bubbles (queued)
 type Speech = { text: string; at: { x: number; y: number }; time: number; speaker: "player" | "npc"; face?: Backdrop };
@@ -207,6 +208,7 @@ canvas.addEventListener("mousemove", (e) => {
   const it = inventoryItemAt(p.x, p.y);
   const vb = verbAt(p.x, p.y);
   hover = { hotspot: hs?.name ?? "", item: it?.name ?? "", verb: vb ?? "" };
+  hoveredHotspotId = hs?.id ?? null;
 });
 
 canvas.addEventListener("click", (e) => {
@@ -387,6 +389,31 @@ function drawDrone(t: number) {
   droneRect = { x: cx - 9, y: cy - 5, w: 18, h: 12 };
 }
 
+// A soft bobbing chevron over each way out of the room, so exits are findable.
+function drawExitCues(t: number) {
+  const room = ROOMS[state.currentRoom];
+  const pulse = 0.5 + 0.5 * Math.sin(t * 3);
+  const bob = Math.sin(t * 3) * 1.5;
+  for (const h of room.hotspots) {
+    const isExit = !!h.exit || (h.id === "door" && state.flags.doorOpen);
+    if (!isExit) continue;
+    const cx = Math.round(h.rect.x + h.rect.w / 2);
+    const cy = Math.round(h.rect.y + h.rect.h / 2 + bob);
+    const hot = hoveredHotspotId === h.id;
+    ctx.save();
+    ctx.globalAlpha = (hot ? 0.85 : 0.4) + 0.35 * pulse;
+    ctx.strokeStyle = "#f2e7b0";
+    ctx.lineWidth = 1.5;
+    ctx.lineJoin = "round";
+    ctx.beginPath();             // an up-chevron: "exit this way"
+    ctx.moveTo(cx - 4, cy + 2);
+    ctx.lineTo(cx, cy - 3);
+    ctx.lineTo(cx + 4, cy + 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
 function render(t: number) {
   const room = ROOMS[state.currentRoom];
   ctx.imageSmoothingEnabled = false;
@@ -395,6 +422,7 @@ function render(t: number) {
   room.paint(ctx, t, state);
   player.draw(ctx, room);
   drawMikeJump(); // scripted dive, drawn over the scene
+  drawExitCues(t); // show where you can leave the room
   drawDrone(t);   // the inescapable camera, in every room
 
   // speech (word-wrapped, stays until click)

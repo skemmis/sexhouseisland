@@ -87,11 +87,11 @@ export const DOCK: Room = {
       face: 1,
     },
     {
-      id: "beachpath",
-      name: "path to the beach",
-      rect: { x: 0, y: 96, w: 14, h: 40 }, // off the left edge of the deck
-      walkTo: { x: 12, y: 126 },
-      face: -1,
+      id: "archway",
+      name: "the archway to the beach",
+      rect: { x: 126, y: 34, w: 30, h: 38 }, // the arched passage left of the pool
+      walkTo: { x: 118, y: 126 },
+      face: 0,
       exit: { to: "beach", entry: { x: 300, y: 122 }, face: -1 },
     },
   ],
@@ -263,7 +263,7 @@ export function interact(
       if (verb === "Look at") return { say: ["A beach towel. Soft, dry, warm. The single most powerful object on this island."] };
       return { say: [`I can't ${verb.toLowerCase()} the towel.`] };
 
-    case "beachpath":
+    case "archway":
     case "pooldeck":
     case "pooldoor":
       if (verb === "Look at") return { say: ["The way through."] };
