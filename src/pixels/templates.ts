@@ -141,6 +141,150 @@ export const PELICAN: SpriteTemplate = {
 };
 
 // ---------------------------------------------------------------------------
+//  NEW SILHOUETTE: LOOKSMAXXER  (broad, over-muscled, shirtless, in trunks)
+//  Wider shoulders/arms than the base body, tapering to a narrow waist.
+// ---------------------------------------------------------------------------
+const LOOKSMAXXER: SpriteTemplate = {
+  w: 16,
+  h: 24,
+  palette: SWIMSUIT_PALETTE,
+  regions: [
+    "................",
+    "................",
+    ".....HHHHHH.....",
+    ".....HHHHHH.....",
+    ".....HSSSSH.....",
+    ".....HESSEH.....",
+    ".....SSSSSS.....",
+    ".....SSSSSS.....",
+    ".....SSSSSS.....", // thick neck
+    "..SSSSSSSSSSSS..", // huge shoulders
+    ".SSSSSSSSSSSSSS.",
+    ".SSSSSSSSSSSSSS.",
+    ".SSSSSSSSSSSSSS.",
+    "..SSSSSSSSSSSS..",
+    "...SSSSSSSSSS...", // waist taper
+    "...SWWWWWWWWS...", // trunks
+    "...WWWWWWWWWW...",
+    "...SSSS..SSSS...", // big thighs
+    "...SSSS..SSSS...",
+    "...SSSS..SSSS...",
+    "...SSSS..SSSS...",
+    "...SSS....SSS...",
+    "...SSS....SSS...",
+    "..SSSS....SSSS..",
+  ],
+  allow: {
+    O: ["1"],
+    S: ["2", "3", "4", "1"],
+    H: ["5", "6", "7", "8", "1"],
+    E: ["b", "2"],
+    W: ["9", "a", "c", "d", "1"],
+  },
+};
+
+// ---------------------------------------------------------------------------
+//  NEW SILHOUETTE: WET MAN  (in trunks, a towel draped over both shoulders)
+// ---------------------------------------------------------------------------
+const WETMAN_PALETTE: Palette = {
+  ...SWIMSUIT_PALETTE,
+  t: "#dfe6ee", u: "#b8c4cc", // towel white / shadow
+};
+const WETMAN: SpriteTemplate = {
+  w: 16,
+  h: 24,
+  palette: WETMAN_PALETTE,
+  regions: [
+    "................",
+    "................",
+    ".....HHHHHH.....",
+    ".....HHHHHH.....",
+    ".....HSSSSH.....",
+    ".....HESSEH.....",
+    ".....SSSSSS.....",
+    ".....SSSSSS.....",
+    "......SSSS......",
+    "....TTTTTTTT....", // towel over shoulders
+    "..SSTTSSSSTTSS..", // towel strips hang down the front
+    "..SSTTSSSSTTSS..",
+    "..SSTTSSSSTTSS..",
+    "..SSTTSSSSTTSS..",
+    "...STTSSSSTTS...",
+    "....WWWWWWWW....", // trunks
+    "....WWWWWWWW....",
+    "....SSS..SSS....",
+    "....SSS..SSS....",
+    "....SSS..SSS....",
+    "....SSS..SSS....",
+    "....SSS..SSS....",
+    "....SSS..SSS....",
+    "...SSSS..SSSS...",
+  ],
+  allow: {
+    O: ["1"],
+    S: ["2", "3", "4", "1"],
+    H: ["5", "6", "7", "8", "1"],
+    E: ["b", "2"],
+    W: ["9", "a", "c", "d", "1"],
+    T: ["t", "u", "1"],
+  },
+};
+
+// ---------------------------------------------------------------------------
+//  NEW SILHOUETTE: WHEELCHAIR  (seated figure, big wheels flanking the seat)
+// ---------------------------------------------------------------------------
+const WHEELCHAIR_PALETTE: Palette = {
+  ".": "transparent",
+  "1": "#14101a", // outline
+  "2": "#e3b07a", "3": "#c8915a", "4": "#f0c89a", // skin
+  "5": "#3a2a18", "6": "#7a5230", // hair
+  b: "#1a1a1a", // eye
+  "8": "#3a6ea5", "9": "#2b507a", // shirt
+  d: "#2b2b3a", e: "#3a3a4a", // trousers / lap blanket
+  g: "#4a4a55", h: "#80808c", // wheel tire / rim
+};
+const WHEELCHAIR: SpriteTemplate = {
+  w: 20,
+  h: 24,
+  palette: WHEELCHAIR_PALETTE,
+  regions: [
+    "....................",
+    "....................",
+    ".......HHHHHH.......",
+    ".......HHHHHH.......",
+    ".......HSSSSH.......",
+    ".......HESSEH.......",
+    ".......SSSSSS.......",
+    ".......SSSSSS.......",
+    "........SSSS........",
+    "......TTTTTTTT......", // shoulders
+    ".....TTTTTTTTTT.....", // arms reach to the rims
+    "...WWTTTTTTTTTTWW...", // round wheels begin to flank the seat
+    "..WWWWTTTTTTTTWWWW..",
+    ".WWWWWSTTTTTTSWWWWW.", // hands grip the rims
+    "WWWWWWLLLLLLLLWWWWWW", // widest point of the wheels; seated lap
+    "WWWWWWLLLLLLLLWWWWWW",
+    "WWWWWWLLLLLLLLWWWWWW",
+    ".WWWWWLLLLLLLLWWWWW.",
+    "..WWWWLLLLLLLLWWWW..",
+    "...WWWLL....LLWWW...", // lower legs drop from the seat
+    "....WWL......LWW....",
+    ".......S....S.......", // shins / feet on the footplate
+    ".......SS..SS.......",
+    "......SSS..SSS......",
+  ],
+  allow: {
+    O: ["1"],
+    S: ["2", "3", "4", "1"],
+    H: ["5", "6", "1"],
+    E: ["b", "2"],
+    T: ["8", "9", "1"],
+    L: ["d", "e", "1"],
+    W: ["g", "h", "1"],
+  },
+};
+
+// ---------------------------------------------------------------------------
 //  REGISTRY — what `npm run gen --template <name>` selects from.
 // ---------------------------------------------------------------------------
 export const TEMPLATES: Record<string, TemplateEntry> = {
@@ -159,6 +303,21 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
     label: "robed figure (doula / judge / oracle)",
     template: ROBE,
     defaultChoice: { O: "1", S: "2", E: "b", H: "5", R: "r" },
+  },
+  looksmaxxer: {
+    label: "broad over-muscled shirtless figure in trunks",
+    template: LOOKSMAXXER,
+    defaultChoice: { O: "1", S: "2", E: "b", H: "7", W: "a" },
+  },
+  wetman: {
+    label: "figure in trunks with a towel draped over the shoulders",
+    template: WETMAN,
+    defaultChoice: { O: "1", S: "2", E: "b", H: "6", W: "a", T: "t" },
+  },
+  wheelchair: {
+    label: "seated figure in a wheelchair with big wheels",
+    template: WHEELCHAIR,
+    defaultChoice: { O: "1", S: "2", E: "b", H: "6", T: "8", L: "d", W: "g" },
   },
   pelican: {
     label: "front-facing pelican",
