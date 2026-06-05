@@ -9,11 +9,10 @@ import { flatFill, type PixelSprite, type SpriteTemplate } from "./sprite";
 //  a misbehaving model can never ship an illegal sprite.
 //
 //  Everything in the slice is built so these are interchangeable:
-//    - RulesFiller        : deterministic, no ML (works today)
-//    - LlmFiller          : ask a text model to emit the index grid
-//    - DiscreteGridFiller : a model whose native output is grid cells/tokens
-//                           (the "minebench"/Minecraft-block-style path)
-//    - DiffusionFiller    : conditioned pixel-art diffusion + snap/quantize
+//    - RulesFiller   : deterministic, no ML (works today, see below)
+//    - LlmGridFiller : a text model emits the index grid via spatial reasoning,
+//                      the MineBench-style path (see ./llm.ts)
+//    - (DiffusionFiller) : conditioned pixel-art diffusion + snap/quantize
 // ============================================================================
 
 export interface FillContext {
@@ -43,26 +42,7 @@ export class RulesFiller implements Filler {
   }
 }
 
-/**
- * PLACEHOLDER for the discrete-grid / "minebench"-style backend.
- *
- * This is deliberately unimplemented because it depends on what that model
- * actually is. The contract it must satisfy is fully defined by `Filler`:
- * given a template whose `regions` grid marks each cell's zone and whose
- * `allow` map lists the legal palette chars per zone, emit a `PixelSprite`
- * whose every cell is a legal char for its zone. A discrete grid model is a
- * natural fit because its output is already cells-on-a-grid rather than
- * continuous pixels — it would be conditioned on (regions, allow, prev) and
- * decode one palette index per opaque cell.
- *
- * To make this real, wire `fill()` to the model's inference call and run the
- * output through `validateFill` (resampling on failure).
- */
-export class DiscreteGridFiller implements Filler {
-  readonly name = "discrete-grid";
-  fill(_template: SpriteTemplate, _ctx: FillContext): PixelSprite {
-    throw new Error(
-      "DiscreteGridFiller not wired yet — needs the target model's inference interface.",
-    );
-  }
-}
+// The MineBench-style backend — a text model emitting the grid via spatial
+// reasoning — lives in ./llm.ts as `LlmGridFiller`, since it brings its own
+// serialize/parse machinery. It implements this same `Filler` interface, so
+// it's a drop-in replacement for `RulesFiller` anywhere a filler is used.

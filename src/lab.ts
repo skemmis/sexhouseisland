@@ -4,12 +4,14 @@ import {
   HERO_IDLE, HERO_TEMPLATE, VARIANT_DEFAULT, VARIANT_NIGHT_PIRATE,
 } from "./pixels/hero";
 import { WALK_FRAMES, WALK_TEMPLATES } from "./pixels/walk";
+import { GALLERY } from "./pixels/gallery";
+import { LlmGridFiller, replay } from "./pixels/llm";
 
 const canvas = document.getElementById("lab") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
 
 const W = 980;
-const H = 470;
+const H = 600;
 canvas.width = W;
 canvas.height = H;
 ctx.imageSmoothingEnabled = false;
@@ -94,3 +96,22 @@ function animate(now: number) {
   requestAnimationFrame(animate);
 }
 requestAnimationFrame(animate);
+
+// --- LLM-generated gallery (MineBench-style: emitted by spatial reasoning) ---
+const galY = 488;
+label("LLM-GENERATED (no image model) — raw grids emitted by spatial reasoning, then validated", 20, galY, "#cfcfe0");
+let gx = 40;
+for (const { name, sprite } of GALLERY) {
+  drawSprite(ctx, sprite, gx, galY + 16, 4, false);
+  label(name, gx, galY + 28 + sprite.h * 4, "#9a9ab0");
+  gx += sprite.w * 4 + 48;
+}
+
+// --- prove the LlmGridFiller protocol round-trips end to end -----------------
+const filler = new LlmGridFiller(replay(HERO_IDLE.rows.join("\n")), "the hero, idle");
+void filler.fill(HERO_TEMPLATE, { frame: 0 }).then((s) => {
+  const ok = validateFill(HERO_TEMPLATE, s).ok;
+  label(`LlmGridFiller (serialize→complete→parse→validate): ${ok ? "OK — legal sprite" : "FAILED"}`, 20, galY + 92, ok ? "#9be2a0" : "#e2796a");
+  drawSprite(ctx, s, 760, galY + 12, 3);
+  label("filler output", 760, galY + 88, "#9a9ab0");
+});
