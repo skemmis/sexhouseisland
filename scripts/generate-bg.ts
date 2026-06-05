@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { decodeImage, encodePng, fitResize, toDataUrl } from "./imageproc";
+import { ART_DIRECTION } from "../src/art";
 
 // ============================================================================
 //  Generate a painted static backdrop via an image-gen API, downscale it to the
@@ -12,18 +13,19 @@ import { decodeImage, encodePng, fitResize, toDataUrl } from "./imageproc";
 //  Claude (Anthropic) is text-only and cannot paint these — hence an image API.
 // ============================================================================
 
+// Both prompts extend the shared house style (src/art.ts) so backdrops,
+// portraits, and sprites all read as the same sunset-lit world.
 const BACKDROP_AD =
-  "16-bit pixel-art video-game BACKGROUND, painterly and moody, dusk lighting, " +
-  "rich saturated-but-dark palette, bold shapes, in the style of LucasArts' " +
-  "The Secret of Monkey Island and Day of the Tentacle. EMPTY SET: no people, no " +
+  `${ART_DIRECTION}\n\n` +
+  "Render a 16-bit pixel-art video-game BACKGROUND. EMPTY SET: no people, no " +
   "characters, no animals, no text. Wide side-on composition. Leave the bottom " +
   "third as flat open ground for characters to walk on.";
 
 const PORTRAIT_AD =
-  "A 16-bit pixel-art CHARACTER PORTRAIT — head and shoulders, like a LucasArts " +
-  "dialogue close-up (The Secret of Monkey Island / Day of the Tentacle). One " +
-  "single character, centered, facing the viewer, expressive cartoon features, " +
-  "bold shapes, moody dusk lighting, on a simple dark plain background. No text.";
+  `${ART_DIRECTION}\n\n` +
+  "Render a 16-bit pixel-art CHARACTER PORTRAIT — head and shoulders, like a " +
+  "LucasArts dialogue close-up. One single character, centered, facing the " +
+  "viewer, expressive cartoon features, on a simple dark plain background. No text.";
 
 async function genOpenAI(full: string, size: string): Promise<Buffer> {
   const key = process.env.OPENAI_API_KEY;

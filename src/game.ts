@@ -4,6 +4,8 @@ import { drawSprite } from "./pixels/render";
 import { TEMPLATES } from "./pixels/templates";
 import { makeBackdrop, drawBackdrop } from "./background";
 import { POOL_DECK_BG } from "./game/poolDeckBg";
+import { MIKE_SPRITE } from "./game/mikeSprite";
+import { MIKE_PORTRAIT_IMG } from "./game/mikePortraitImg";
 
 // A baked (no-API) pelican for set dressing, from the silhouette-template library.
 const PELICAN_SPRITE = flatFill(TEMPLATES.pelican.template, TEMPLATES.pelican.defaultChoice);
@@ -62,6 +64,13 @@ export const DOCK: Room = {
       rect: { x: 36, y: 26, w: 16, h: 18 }, // the painted lantern by the door
       walkTo: { x: 44, y: 118 },
       face: 0,
+    },
+    {
+      id: "mike",
+      name: "Mike White",
+      rect: { x: 262, y: 80, w: 30, h: 44 }, // by the loungers, right
+      walkTo: { x: 250, y: 126 },
+      face: 1,
     },
   ],
   paint: paintDock,
@@ -181,6 +190,40 @@ export function interact(
       if (verb === "Pick up") return { say: ["It snaps at me with that enormous beak. I'll pass."] };
       return { say: [`I can't ${verb.toLowerCase()} the pelican.`] };
 
+    case "mike":
+      if (state.flags.mikeGone) {
+        if (verb === "Look at") return { say: ["Just ripples where Mike used to be. The deep end kept him."] };
+        if (verb === "Talk to") return { say: ["He's not coming back up. He never resurfaced."] };
+        return { say: [`I can't ${verb.toLowerCase()} a man who isn't there anymore.`] };
+      }
+      if (verb === "Look at")
+        return { say: ["Mike White. Survivor, the Amazing Race, and now this. He's grinning at the deep end like it owes him money."] };
+      if (verb === "Talk to")
+        return {
+          dialogue: {
+            speakerPortrait: MIKE_PORTRAIT_IMG,
+            start: "hi",
+            nodes: {
+              hi: {
+                npc: [
+                  "Sex House Island?! I am ALL in. I've done Survivor, the Amazing Race — nothing compares.",
+                  "Hey. Hey. Does this pool have a bottom? Because I'm looking at it and I don't think it does.",
+                  "I have to know. For the show. For ME.",
+                ],
+                choices: [
+                  { text: "Mike, please don't.", goto: "jump" },
+                  { text: "Go prove it, Mike.", goto: "jump" },
+                ],
+              },
+              jump: {
+                npc: ["Only one way to find out!", "CANNONBALL!", "*SPLOOOSH*", "...", "..."],
+                effect: (s) => { s.flags.mikeGone = true; },
+              },
+            },
+          },
+        };
+      return { say: [`I can't ${verb.toLowerCase()} Mike.`] };
+
     case "key":
       if (verb === "Look at") return { say: ["A rusty key, fresh from the deep end. It smells of chlorine and despair."] };
       return { say: [`I can't ${verb.toLowerCase()} the key like that.`] };
@@ -270,6 +313,9 @@ function paintProceduralSet(ctx: CanvasRenderingContext2D, t: number) {
 // the painted layout (pelican on the front deck, skimmer at the pool's left).
 function paintOverlays(ctx: CanvasRenderingContext2D, _t: number, state: GameState) {
   drawSprite(ctx, PELICAN_SPRITE, 48, 102, 1.8); // on the front deck, foreground
+
+  // Mike White, lounging by the pool — until he proves the deep end has no bottom
+  if (!state.flags.mikeGone) drawSprite(ctx, MIKE_SPRITE, 265, 80, 1.7);
 
   if (!state.flags.gotRod) {
     ctx.strokeStyle = "#9aa3ad";

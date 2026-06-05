@@ -4,7 +4,7 @@ import { drawText, textWidth, GLYPH_H, GLYPH_W } from "./pixelfont";
 import { PLAYER_WALK } from "./game/playerWalk";
 import { PLAYER_PORTRAIT } from "./game/playerPortrait";
 import { PLAYER_PORTRAIT_IMG } from "./game/playerPortraitImg";
-import { makeBackdrop, drawBackdrop } from "./background";
+import { makeBackdrop, drawBackdrop, type Backdrop } from "./background";
 import {
   interact, newGame, ROOMS, START_POS, ITEMS,
 } from "./game";
@@ -43,7 +43,7 @@ let pendingItem: Item | null = null; // the "X" in "Use X on Y"
 let hover = { hotspot: "", item: "", verb: "" };
 
 // speech bubbles (queued)
-type Speech = { text: string; at: { x: number; y: number }; time: number; speaker: "player" | "npc" };
+type Speech = { text: string; at: { x: number; y: number }; time: number; speaker: "player" | "npc"; face?: Backdrop };
 let speechQueue: Speech[] = [];
 
 // active conversation
@@ -104,14 +104,31 @@ function hotspotAt(x: number, y: number) {
 // ---------------------------------------------------------------------------
 //  Speech helpers
 // ---------------------------------------------------------------------------
-function say(lines: string[], at: { x: number; y: number }, speaker: "player" | "npc" = "player") {
+function say(
+  lines: string[],
+  at: { x: number; y: number },
+  speaker: "player" | "npc" = "player",
+  face?: Backdrop,
+) {
   for (const text of lines)
-    speechQueue.push({ text, at, time: Math.max(1.1, text.length * 0.045), speaker });
+    speechQueue.push({ text, at, time: Math.max(1.1, text.length * 0.045), speaker, face });
 }
 
 function playerSpeechPos() {
   return { x: player.pos.x, y: player.pos.y - 50 * player.scaleIn(ROOMS[state.currentRoom]) };
 }
+
+// cache of NPC portrait images keyed by their data URL
+const npcFaces = new Map<string, Backdrop>();
+function faceFor(dataUrl?: string): Backdrop | undefined {
+  if (!dataUrl) return undefined;
+  let f = npcFaces.get(dataUrl);
+  if (!f) { f = makeBackdrop(dataUrl); npcFaces.set(dataUrl, f); }
+  return f;
+}
+
+// where the NPC currently being talked to stands (set when a hotspot is clicked)
+let npcAnchor: { x: number; y: number } | null = null;
 
 // ---------------------------------------------------------------------------
 //  Performing actions
@@ -123,17 +140,15 @@ function runResult(r: ReturnType<typeof interact>) {
     dialogueNode = r.dialogue.start;
     showDialogueNode();
   }
-  if (r.say) say(r.say, playerSpeechPos());
+  if (r.say) say(r.say, playerSpeechPos(), "player", playerFace);
 }
 
 function showDialogueNode() {
   if (!dialogue) return;
   const node = dialogue.nodes[dialogueNode];
-  const parrot = ROOMS[state.currentRoom].hotspots.find((h) => h.id === "parrot");
-  const at = parrot
-    ? { x: parrot.rect.x + parrot.rect.w / 2, y: parrot.rect.y - 6 }
-    : playerSpeechPos();
-  say(node.npc, at, "npc");
+  node.effect?.(state); // scripted consequence (e.g. Mike jumps in)
+  const at = npcAnchor ?? playerSpeechPos();
+  say(node.npc, at, "npc", faceFor(dialogue.speakerPortrait));
 }
 
 function clickInScene(p: { x: number; y: number }) {
@@ -144,6 +159,7 @@ function clickInScene(p: { x: number; y: number }) {
   if (hs) {
     const verb = currentVerb;
     const item = pendingItem;
+    npcAnchor = { x: hs.rect.x + hs.rect.w / 2, y: hs.rect.y - 4 };
     player.walkTo(hs.walkTo, hs.face ?? 0, () => {
       if (verb === "Walk to") {
         // just approached; nothing to do
@@ -274,7 +290,7 @@ function render(t: number) {
   for (const sp of speechQueue.slice(0, 1)) drawSpeech(sp.text, sp.at.x, sp.at.y);
 
   // dialogue portrait — the speaker's generated face, with lip-sync
-  if (speechQueue[0]?.speaker === "player") drawPortrait(t);
+  if (speechQueue[0]?.face) drawPortrait(speechQueue[0].face, t);
 
   // UI strip
   drawUI();
@@ -361,7 +377,7 @@ function centerText(s: string, cx: number, y: number, size: number) {
 // Gemini-painted portrait; falls back to the PixelBench portrait (with lip-sync)
 // if none is baked in.
 const playerFace = makeBackdrop(PLAYER_PORTRAIT_IMG);
-function drawPortrait(t: number) {
+function drawPortrait(face: Backdrop, t: number) {
   const size = 58;
   const px = 4;
   const py = SCENE_H - size - 4;
@@ -369,11 +385,12 @@ function drawPortrait(t: number) {
   ctx.fillRect(px - 2, py - 2, size + 4, size + 4);
   ctx.strokeStyle = "#caa54a";
   ctx.strokeRect(px - 1.5, py - 1.5, size + 3, size + 3);
-  if (!drawBackdrop(ctx, playerFace, px, py, size, size)) {
+  if (!drawBackdrop(ctx, face, px, py, size, size)) {
+    // fallback (player only): the PixelBench portrait with lip-sync
     ctx.imageSmoothingEnabled = false;
     const scale = size / 24;
-    const face = Math.sin(t * 16) > 0 ? PLAYER_PORTRAIT.talking : PLAYER_PORTRAIT.neutral;
-    drawSprite(ctx, face, px, py, scale);
+    const f = Math.sin(t * 16) > 0 ? PLAYER_PORTRAIT.talking : PLAYER_PORTRAIT.neutral;
+    drawSprite(ctx, f, px, py, scale);
   }
 }
 

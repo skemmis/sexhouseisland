@@ -46,11 +46,15 @@ export interface DialogueNode {
   npc: string[];
   /** Player response options. Empty = conversation ends after npc lines. */
   choices?: { text: string; goto: string }[];
+  /** Runs once when this node is entered — for scripted consequences. */
+  effect?: (state: GameState) => void;
 }
 
 export interface Dialogue {
   start: string;
   nodes: Record<string, DialogueNode>;
+  /** A base64 portrait data URL for the NPC speaking, shown in the dialogue box. */
+  speakerPortrait?: string;
 }
 
 /** A room: a backdrop, a walkable floor band, hotspots, and characters. */

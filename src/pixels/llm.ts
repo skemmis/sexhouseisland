@@ -1,5 +1,6 @@
 import { validateFill, type PixelSprite, type SpriteTemplate } from "./sprite";
 import type { FillContext, Filler } from "./fillers";
+import { ART_DIRECTION } from "../art";
 
 // ============================================================================
 //  THE MINEBENCH-STYLE FILLER.
@@ -45,6 +46,7 @@ export function serializeTask(t: SpriteTemplate, style: string, example?: PixelS
   return [
     `You are a pixel-sprite filler. Fill a ${t.w}x${t.h} grid.`,
     ``,
+    `ART DIRECTION: ${ART_DIRECTION}`,
     `STYLE: ${style}`,
     ``,
     `PALETTE (char = color):`,
