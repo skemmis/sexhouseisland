@@ -31,6 +31,8 @@ export interface Hotspot {
   walkTo: Vec;
   /** Optional facing direction once arrived: -1 left, 1 right, 0 toward camera. */
   face?: number;
+  /** If set, walking here travels to another room (entering at `entry`). */
+  exit?: { to: string; entry: Vec; face?: number };
 }
 
 /** An inventory item. `icon` is drawn procedurally for now (see render.ts). */
@@ -86,4 +88,6 @@ export interface ActionResult {
   effect?: (state: GameState) => void;
   /** Start a conversation. */
   dialogue?: Dialogue;
+  /** Travel to another room (for conditional exits, e.g. an unlocked door). */
+  goto?: { room: string; entry: Vec; face?: number };
 }

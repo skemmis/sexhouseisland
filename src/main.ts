@@ -92,8 +92,14 @@ function inventoryItemAt(x: number, y: number): Item | null {
   return state.inventory[idx] ?? null;
 }
 
+// the drone's current on-screen rect, updated each frame by drawDrone
+let droneRect = { x: -99, y: -99, w: 0, h: 0 };
+
 function hotspotAt(x: number, y: number) {
   if (y >= SCENE_H) return null;
+  // the ever-present camera drone is clickable wherever it's hovering
+  if (x >= droneRect.x && x <= droneRect.x + droneRect.w && y >= droneRect.y && y <= droneRect.y + droneRect.h)
+    return { id: "drone", name: "the drone", rect: { ...droneRect }, walkTo: { x: clamp(player.pos.x, 8, VW - 8), y: player.pos.y }, face: 0 };
   const room = ROOMS[state.currentRoom];
   // topmost-last wins; iterate in reverse for "closest" feel
   for (let i = room.hotspots.length - 1; i >= 0; i--) {
@@ -143,7 +149,17 @@ function runResult(r: ReturnType<typeof interact>) {
     dialogueNode = r.dialogue.start;
     showDialogueNode();
   }
+  if (r.goto) changeRoom(r.goto.room, r.goto.entry, r.goto.face ?? 0);
   if (r.say) say(r.say, playerSpeechPos(), "player", playerFace);
+}
+
+// Travel between rooms: reposition the player and clear any conversation/speech.
+function changeRoom(to: string, entry: { x: number; y: number }, face = 0) {
+  state.currentRoom = to;
+  player.pos = { ...entry };
+  player.walkTo({ ...entry }, face); // stop motion + set facing
+  speechQueue.length = 0;
+  dialogue = null;
 }
 
 function showDialogueNode() {
@@ -164,11 +180,8 @@ function clickInScene(p: { x: number; y: number }) {
     const item = pendingItem;
     npcAnchor = { x: hs.rect.x + hs.rect.w / 2, y: hs.rect.y - 4 };
     player.walkTo(hs.walkTo, hs.face ?? 0, () => {
-      if (verb === "Walk to") {
-        // just approached; nothing to do
-      } else {
-        runResult(interact(verb as Verb, hs.id, state, item?.id));
-      }
+      if (hs.exit) changeRoom(hs.exit.to, hs.exit.entry, hs.exit.face ?? 0);
+      else runResult(interact(verb as Verb, hs.id, state, item?.id));
       resetVerb();
     });
   } else {
@@ -349,6 +362,31 @@ function update(dt: number) {
   player.talking = speechQueue.length > 0;
 }
 
+// The inescapable camera drone — hovers up-and-right of the player in every
+// room, bobbing, red light blinking. Drawn over everything; clickable anywhere.
+function drawDrone(t: number) {
+  const room = ROOMS[state.currentRoom];
+  const s = player.scaleIn(room);
+  const cx = Math.round(clamp(player.pos.x + 18, 12, VW - 12));
+  const cy = Math.round(clamp(player.pos.y - 52 * s - 4 + Math.sin(t * 4) * 1.5, 8, SCENE_H - 26));
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  // spinning rotors
+  ctx.strokeStyle = "rgba(185,195,205,0.5)";
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx - 8, cy - 3.5); ctx.lineTo(cx - 2, cy - 3.5); ctx.moveTo(cx + 2, cy - 3.5); ctx.lineTo(cx + 8, cy - 3.5); ctx.stroke();
+  ctx.strokeStyle = "#3a3f48";
+  ctx.beginPath(); ctx.moveTo(cx - 5, cy - 3.5); ctx.lineTo(cx - 5, cy - 1.5); ctx.moveTo(cx + 5, cy - 3.5); ctx.lineTo(cx + 5, cy - 1.5); ctx.stroke();
+  // body + camera lens
+  ctx.fillStyle = "#1c2026"; ctx.fillRect(cx - 4, cy - 1, 8, 5);
+  ctx.fillStyle = "#2c313a"; ctx.fillRect(cx - 3, cy - 2, 6, 2);
+  ctx.fillStyle = "#05060a"; ctx.fillRect(cx - 1, cy + 3, 2, 2); // downward lens
+  // the red light, always blinking
+  if (Math.sin(t * 6) > 0) { ctx.fillStyle = "#ff3b30"; ctx.fillRect(cx + 3, cy, 1, 1); }
+  ctx.restore();
+  droneRect = { x: cx - 9, y: cy - 5, w: 18, h: 12 };
+}
+
 function render(t: number) {
   const room = ROOMS[state.currentRoom];
   ctx.imageSmoothingEnabled = false;
@@ -357,6 +395,7 @@ function render(t: number) {
   room.paint(ctx, t, state);
   player.draw(ctx, room);
   drawMikeJump(); // scripted dive, drawn over the scene
+  drawDrone(t);   // the inescapable camera, in every room
 
   // speech (word-wrapped, stays until click)
   for (const sp of speechQueue.slice(0, 1)) drawSpeech(sp.text, sp.at.x, sp.at.y);
@@ -372,9 +411,11 @@ function render(t: number) {
     ctx.fillStyle = "rgba(0,0,0,0.7)";
     ctx.fillRect(0, 0, VW, VH);
     ctx.fillStyle = "#f0ecd0";
-    centerText("YOU GOT INTO THE VILLA", VW / 2, 80, 12);
-    centerText("(the others are still locked out by the pool)", VW / 2, 98, 6);
-    centerText("click to play again", VW / 2, 120, 7);
+    centerText("THE SHOW RUNS ITSELF", VW / 2, 64, 11);
+    centerText('"make it sexy.', VW / 2, 84, 7);
+    centerText('don\'t let anything get too unsexy."', VW / 2, 96, 7);
+    centerText("— the entire production", VW / 2, 110, 5);
+    centerText("click to play again", VW / 2, 124, 6);
   }
 }
 
@@ -513,6 +554,10 @@ function drawIcon(kind: string, x: number, y: number) {
     ctx.beginPath(); ctx.arc(4, 4, 3, 0, Math.PI * 2); ctx.fill();
     ctx.fillRect(4, 4, 2, 8);
     ctx.fillRect(4, 10, 4, 2);
+  } else if (kind === "towel") {
+    ctx.fillStyle = "#d8b24a"; ctx.fillRect(1, 2, 11, 9); // folded towel
+    ctx.fillStyle = "#c0556f"; ctx.fillRect(1, 5, 11, 2); // a stripe
+    ctx.fillStyle = "rgba(255,255,255,0.25)"; ctx.fillRect(1, 2, 11, 1);
   }
   ctx.restore();
 }

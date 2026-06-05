@@ -13,7 +13,7 @@ const variants = JSON.parse(readFileSync(`generated/${name}-variants.json`, "utf
 const v = variants[+nStr - 1];
 if (!v) { console.error(`variant ${nStr} not found (have ${variants.length})`); process.exit(1); }
 
-if (v.kind === "portrait") {
+if (v.kind === "portrait" || v.kind === "backdrop") {
   writeFileSync(modulePath, `// Picked variant ${nStr} of "${name}" (Gemini portrait).\nexport const ${varName} = "${v.dataUrl}";\n`);
 } else {
   writeFileSync(

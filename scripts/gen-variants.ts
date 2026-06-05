@@ -22,19 +22,15 @@ import { drawText } from "../src/pixelfont";
 //  copies that option into the game.
 // ============================================================================
 
-// ---- Gemini (nano banana) portrait, one image ----
-async function genGeminiPortrait(desc: string): Promise<RGBA> {
+// ---- Gemini (nano banana) image: portrait or backdrop ----
+async function genGeminiImage(full: string, aspect: string, w: number, h: number): Promise<RGBA> {
   const key = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY not set");
   const model = process.env.GEMINI_IMAGE_MODEL ?? "gemini-3.1-flash-image";
   const ver = process.env.GEMINI_API_VERSION ?? "v1beta";
-  const full =
-    `${ART_DIRECTION}\n\nRender a 16-bit pixel-art CHARACTER PORTRAIT (LucasArts dialogue ` +
-    `close-up): head and shoulders, one single character centered facing the viewer, on a ` +
-    `simple dark background, no text.\n\nCharacter: ${desc}`;
   const call = (withAspect: boolean) => {
     const generationConfig: Record<string, unknown> = { responseModalities: ["TEXT", "IMAGE"] };
-    if (withAspect) generationConfig.imageConfig = { aspectRatio: "1:1" };
+    if (withAspect) generationConfig.imageConfig = { aspectRatio: aspect };
     return fetch(`https://generativelanguage.googleapis.com/${ver}/models/${model}:generateContent`, {
       method: "POST",
       headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
@@ -46,8 +42,18 @@ async function genGeminiPortrait(desc: string): Promise<RGBA> {
   const parts = (await res.json()).candidates?.[0]?.content?.parts ?? [];
   const b64 = parts.find((p: any) => p?.inlineData?.data ?? p?.inline_data?.data)?.inlineData?.data ?? parts.find((p: any) => p?.inline_data?.data)?.inline_data?.data;
   if (!b64) throw new Error("Gemini returned no image part");
-  return fitResize(decodeImage(Buffer.from(b64, "base64")), 72, 72);
+  return fitResize(decodeImage(Buffer.from(b64, "base64")), w, h);
 }
+
+const portraitPrompt = (desc: string) =>
+  `${ART_DIRECTION}\n\nRender a 16-bit pixel-art CHARACTER PORTRAIT (LucasArts dialogue ` +
+  `close-up): head and shoulders, one single character centered facing the viewer, on a ` +
+  `simple dark background, no text.\n\nCharacter: ${desc}`;
+
+const backdropPrompt = (desc: string) =>
+  `${ART_DIRECTION}\n\nRender a 16-bit pixel-art video-game BACKGROUND (LucasArts style). ` +
+  `EMPTY SET: no people, no characters, no animals, no text. Wide side-on composition; leave ` +
+  `the bottom third as flat open ground for characters to walk on.\n\nScene: ${desc}`;
 
 function anthropicCompletion(client: Anthropic): Completion {
   return async (prompt: string) => {
@@ -58,10 +64,10 @@ function anthropicCompletion(client: Anthropic): Completion {
 }
 
 // ---- contact sheet: numbered grid of variant PNGs ----
-function contactSheet(tiles: RGBA[]): Buffer {
+function contactSheet(tiles: RGBA[], maxCols = 4): Buffer {
   const pad = 10, label = 16, S = 3;
   const tw = Math.max(...tiles.map((t) => t.w)), th = Math.max(...tiles.map((t) => t.h));
-  const cols = Math.min(tiles.length, 4);
+  const cols = Math.min(tiles.length, maxCols);
   const rows = Math.ceil(tiles.length / cols);
   const cellW = tw + pad, cellH = th + label + pad;
   const W = cols * cellW + pad, H = rows * cellH + pad;
@@ -91,21 +97,26 @@ async function main() {
   const n = Math.max(1, Math.min(8, +(arg("--n", "4")!)));
   const name = arg("--name", "variant")!;
   const templateName = arg("--template", "swimsuit")!;
-  if ((kind !== "portrait" && kind !== "sprite") || !desc) {
-    console.error('Usage: npm run gen:variants -- <portrait|sprite> "<desc>" --n 4 --name id [--template swimsuit]');
+  if ((kind !== "portrait" && kind !== "sprite" && kind !== "backdrop") || !desc) {
+    console.error('Usage: npm run gen:variants -- <portrait|sprite|backdrop> "<desc>" --n 4 --name id [--template swimsuit]');
     process.exit(1);
   }
 
   console.log(`Generating ${n} ${kind} variants of "${desc}" in parallel …`);
   const tiles: RGBA[] = [];
   const saved: any[] = [];
+  let sheetCols = 4;
 
-  if (kind === "portrait") {
-    const results = await Promise.allSettled(Array.from({ length: n }, () => genGeminiPortrait(desc)));
+  if (kind === "portrait" || kind === "backdrop") {
+    const backdrop = kind === "backdrop";
+    const prompt = backdrop ? backdropPrompt(desc) : portraitPrompt(desc);
+    const [aspect, w, h] = backdrop ? ["21:9", 320, 136] as const : ["1:1", 72, 72] as const;
+    if (backdrop) sheetCols = 2;
+    const results = await Promise.allSettled(Array.from({ length: n }, () => genGeminiImage(prompt, aspect, w, h)));
     results.forEach((r, i) => {
       if (r.status === "fulfilled") {
-        tiles.push(r.value);
-        saved.push({ kind: "portrait", dataUrl: toDataUrl(encodeRgba(r.value)) });
+        tiles.push(backdrop ? fitResize(r.value, 200, 85) : r.value); // smaller preview tile for wide backdrops
+        saved.push({ kind, dataUrl: toDataUrl(encodeRgba(r.value)) });
       } else console.error(`  variant ${i + 1} failed: ${r.reason}`);
     });
   } else {
@@ -125,7 +136,7 @@ async function main() {
 
   if (tiles.length === 0) { console.error("All variants failed."); process.exit(1); }
   mkdirSync("generated", { recursive: true });
-  writeFileSync(join("generated", `${name}-variants.png`), contactSheet(tiles));
+  writeFileSync(join("generated", `${name}-variants.png`), contactSheet(tiles, sheetCols));
   writeFileSync(join("generated", `${name}-variants.json`), JSON.stringify(saved, null, 2));
   console.log(`\n✓ ${tiles.length} variants:\n  generated/${name}-variants.png (numbered contact sheet)\n  generated/${name}-variants.json\nPick a number, then bake with: npm run bake:variant -- ${name} <n> <module> <var>`);
 }

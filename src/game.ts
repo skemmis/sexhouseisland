@@ -1,4 +1,4 @@
-import type { ActionResult, GameState, Item, Room, Verb } from "./types";
+import type { ActionResult, Dialogue, GameState, Item, Room, Verb } from "./types";
 import { flatFill } from "./pixels/sprite";
 import { drawSprite } from "./pixels/render";
 import { TEMPLATES } from "./pixels/templates";
@@ -6,6 +6,12 @@ import { makeBackdrop, drawBackdrop } from "./background";
 import { POOL_DECK_BG } from "./game/poolDeckBg";
 import { MIKE_SPRITE } from "./game/mikeSprite";
 import { MIKE_PORTRAIT_IMG } from "./game/mikePortraitImg";
+import { BEACH_BG } from "./game/beachBg";
+import { CONTROL_BG } from "./game/controlBg";
+import { BONNY_SPRITE } from "./game/bonnySprite";
+import { BONNY_PORTRAIT_IMG } from "./game/bonnyPortraitImg";
+import { MACK_SPRITE } from "./game/mackSprite";
+import { MACK_PORTRAIT_IMG } from "./game/mackPortraitImg";
 
 // A baked (no-API) pelican for set dressing, from the silhouette-template library.
 const PELICAN_SPRITE = flatFill(TEMPLATES.pelican.template, TEMPLATES.pelican.defaultChoice);
@@ -18,8 +24,9 @@ const PELICAN_SPRITE = flatFill(TEMPLATES.pelican.template, TEMPLATES.pelican.de
 // ============================================================================
 
 export const ITEMS: Record<string, Item> = {
-  rod:  { id: "rod",  name: "pool skimmer", icon: "rod" },
-  key:  { id: "key",  name: "rusty key",   icon: "key" },
+  rod:   { id: "rod",   name: "pool skimmer", icon: "rod" },
+  key:   { id: "key",   name: "rusty key",   icon: "key" },
+  towel: { id: "towel", name: "beach towel", icon: "towel" },
 };
 
 // ---- The one room: the Sex House Island pool deck at dusk. Hotspots + floor
@@ -72,11 +79,100 @@ export const DOCK: Room = {
       walkTo: { x: 250, y: 126 },
       face: 1,
     },
+    {
+      id: "towel",
+      name: "beach towel",
+      rect: { x: 296, y: 92, w: 22, h: 16 }, // folded on a lounger, far right
+      walkTo: { x: 290, y: 126 },
+      face: 1,
+    },
+    {
+      id: "beachpath",
+      name: "path to the beach",
+      rect: { x: 0, y: 96, w: 14, h: 40 }, // off the left edge of the deck
+      walkTo: { x: 12, y: 126 },
+      face: -1,
+      exit: { to: "beach", entry: { x: 300, y: 122 }, face: -1 },
+    },
   ],
   paint: paintDock,
 };
 
-export const ROOMS: Record<string, Room> = { dock: DOCK };
+// ----------------------------------------------------------------------------
+//  THE BEACH — Bonny is here, freezing, watching the red tide come in.
+// ----------------------------------------------------------------------------
+export const BEACH: Room = {
+  id: "beach",
+  floor: { minY: 116, maxY: 133, minScale: 0.8, maxScale: 1.15 },
+  hotspots: [
+    {
+      id: "bonny",
+      name: "Bonny",
+      rect: { x: 150, y: 78, w: 30, h: 46 },
+      walkTo: { x: 140, y: 128 },
+      face: 1,
+    },
+    {
+      id: "redtide",
+      name: "the red tide",
+      rect: { x: 40, y: 86, w: 240, h: 22 }, // the surf line
+      walkTo: { x: 160, y: 126 },
+      face: 0,
+    },
+    {
+      id: "pooldeck",
+      name: "way back to the pool",
+      rect: { x: 0, y: 70, w: 30, h: 66 }, // the villa wall, left
+      walkTo: { x: 18, y: 126 },
+      face: -1,
+      exit: { to: "dock", entry: { x: 18, y: 126 }, face: 1 },
+    },
+  ],
+  paint: paintBeach,
+};
+
+// ----------------------------------------------------------------------------
+//  THE CONTROL ROOM — behind the villa door. The show runs itself. Mackenzie
+//  has broken in and is poking around.
+// ----------------------------------------------------------------------------
+export const CONTROL: Room = {
+  id: "control",
+  floor: { minY: 112, maxY: 132, minScale: 0.78, maxScale: 1.12 },
+  hotspots: [
+    {
+      id: "terminal",
+      name: "the producer's terminal",
+      rect: { x: 132, y: 70, w: 56, h: 34 }, // the central screen/keyboard
+      walkTo: { x: 160, y: 124 },
+      face: 0,
+    },
+    {
+      id: "screens",
+      name: "the wall of feeds",
+      rect: { x: 40, y: 30, w: 240, h: 40 },
+      walkTo: { x: 160, y: 124 },
+      face: 0,
+    },
+    {
+      id: "mackenzie",
+      name: "Mackenzie",
+      rect: { x: 214, y: 78, w: 30, h: 46 },
+      walkTo: { x: 224, y: 126 },
+      face: 1,
+    },
+    {
+      id: "pooldoor",
+      name: "door to the pool deck",
+      rect: { x: 0, y: 60, w: 30, h: 76 }, // the door, left
+      walkTo: { x: 20, y: 126 },
+      face: -1,
+      exit: { to: "dock", entry: { x: 44, y: 120 }, face: 0 },
+    },
+  ],
+  paint: paintControl,
+};
+
+export const ROOMS: Record<string, Room> = { dock: DOCK, beach: BEACH, control: CONTROL };
 
 export const START_ROOM = "dock";
 export const START_POS = { x: 130, y: 124 };
@@ -104,6 +200,10 @@ export function interact(
   withItem?: string,
 ): ActionResult {
   const has = (id: string) => state.inventory.some((i) => i.id === id);
+
+  // "Walk to" just approaches — only the door reacts to it (to step through).
+  const walkTo = (verb as string) === "Walk to";
+  if (walkTo && targetId !== "door") return {};
 
   switch (targetId) {
     case "rod":
@@ -141,18 +241,80 @@ export function interact(
     case "door":
       if (verb === "Use" && withItem === "key") {
         return {
-          say: ["The rusty key turns with a satisfying *clunk*. The villa's open!"],
-          effect: (s) => {
-            s.flags.doorOpen = true;
-            s.won = true;
-          },
+          say: ["The rusty key turns with a satisfying *clunk*.", "The 'villa' is open. Funny — it doesn't sound like a villa in there. It hums."],
+          effect: (s) => { s.flags.doorOpen = true; },
         };
       }
-      if ((verb === "Open" || verb === "Use") && !state.flags.doorOpen)
+      if (state.flags.doorOpen && (verb === "Open" || verb === "Use" || verb === "Push" || walkTo))
+        return { say: ["I step through — and it isn't a villa at all."], goto: { room: "control", entry: { x: 26, y: 122 }, face: 1 } };
+      if ((verb === "Open" || verb === "Use" || walkTo) && !state.flags.doorOpen)
         return { say: ["Locked. We're not allowed inside — that's the whole bit. I'll need a key."] };
-      if (verb === "Open") return { say: ["It's already open."] };
-      if (verb === "Look at") return { say: ["The villa door. Climate-controlled paradise on the other side. Locked, of course."] };
+      if (verb === "Look at") return { say: state.flags.doorOpen
+        ? ["The open door. Beyond it isn't climate-controlled paradise. It's a low blue hum."]
+        : ["The villa door. Climate-controlled paradise on the other side, supposedly. Locked, of course."] };
       return { say: [`I can't ${verb.toLowerCase()} the door.`] };
+
+    case "towel":
+      if (verb === "Pick up") {
+        if (has("towel") || state.flags.gotTowel) return { say: ["I've already got the towel."] };
+        return { say: ["A fluffy beach towel, abandoned on a lounger. Contraband, basically — it's nearly clothing."],
+          effect: (s) => { s.inventory.push(ITEMS.towel); s.flags.gotTowel = true; } };
+      }
+      if (verb === "Look at") return { say: ["A beach towel. Soft, dry, warm. The single most powerful object on this island."] };
+      return { say: [`I can't ${verb.toLowerCase()} the towel.`] };
+
+    case "beachpath":
+    case "pooldeck":
+    case "pooldoor":
+      if (verb === "Look at") return { say: ["The way through."] };
+      return { say: ["I'll just walk there."] };
+
+    case "redtide":
+      if (verb === "Look at") return { say: ["The surf has a sickly red shimmer, creeping closer with the tide.", "Bonny would know what it is. Bonny knows everything."] };
+      if (verb === "Use" || verb === "Pick up") return { say: ["I am not touching that water."] };
+      return { say: [`I can't ${verb.toLowerCase()} the tide.`] };
+
+    case "bonny":
+      if (verb === "Give" && withItem === "towel") {
+        return { say: ["Oh my GOD — yes. Thank you.", "Bonny wraps herself in the towel and finally stops shivering."],
+          effect: (s) => {
+            const i = s.inventory.findIndex((x) => x.id === "towel");
+            if (i >= 0) s.inventory.splice(i, 1);
+            s.flags.bonnyWarm = true;
+          } };
+      }
+      if (verb === "Give" && withItem) return { say: [`Bonny doesn't want my ${itemName(withItem)}.`] };
+      if (verb === "Look at") return { say: state.flags.bonnyWarm
+        ? ["Bonny, mercifully towel-wrapped now. Twelve million followers and, it turns out, a marine-biology PhD."]
+        : ["Bonny — Korean superinfluencer, twelve million followers, hugging herself against the cold. After dark they take everyone's clothes. 'Cardigans don't trend.'"] };
+      if (verb === "Talk to") return { dialogue: bonnyDialogue(state) };
+      return { say: [`I can't ${verb.toLowerCase()} Bonny.`] };
+
+    case "mackenzie":
+      if (verb === "Look at") return { say: ["Mackenzie. Brought nu-metal to a dating show and a grudge to a surveillance state. Currently elbow-deep in the producers' wiring."] };
+      if (verb === "Talk to") return { dialogue: mackDialogue() };
+      return { say: [`I can't ${verb.toLowerCase()} Mackenzie.`] };
+
+    case "screens":
+      if (verb === "Look at") return { say: ["Dozens of feeds: the pool, the beach, the loungers. Every angle of all of us, all the time.", "One screen is just... me. Right now. I wave. Screen-me waves back half a second later."] };
+      return { say: [`I can't ${verb.toLowerCase()} the feeds.`] };
+
+    case "terminal":
+      if (verb === "Look at" || verb === "Use" || verb === "Pull" || verb === "Push") {
+        return { say: [
+          "The whole show runs off this one machine. No producers. No crew. No network. Just this.",
+          "And there's a single instruction on the screen — the prompt steering all of it:",
+          '"make it sexy. don\'t let anything get too unsexy."',
+          "That's the entire creative direction. We're being run by an AI and one sentence.",
+        ], effect: (s) => { s.flags.sawPrompt = true; s.won = true; } };
+      }
+      return { say: [`I can't ${verb.toLowerCase()} the terminal.`] };
+
+    case "drone":
+      if (verb === "Look at") return { say: ["A camera drone. It films everything. Right now it is filming me looking at it being filmed."] };
+      if (verb === "Talk to") return { say: ["It doesn't answer. It only watches. The little red light blinks. Always the red light."] };
+      if (verb === "Give") return { say: ["It wants nothing. It already has everything: footage of me."] };
+      return { say: ["I swat at it. It bobs out of reach, unbothered. There is no getting rid of it."] };
 
     case "parrot":
       if (verb === "Talk to")
@@ -256,6 +418,74 @@ const POOL_BG = makeBackdrop(POOL_DECK_BG);
 function paintDock(ctx: CanvasRenderingContext2D, t: number, state: GameState) {
   if (!drawBackdrop(ctx, POOL_BG, 0, 0, 320, 136)) paintProceduralSet(ctx, t);
   paintOverlays(ctx, t, state);
+}
+
+const BEACH_BACKDROP = makeBackdrop(BEACH_BG);
+const CONTROL_BACKDROP = makeBackdrop(CONTROL_BG);
+
+function paintBeach(ctx: CanvasRenderingContext2D, t: number, state: GameState) {
+  if (!drawBackdrop(ctx, BEACH_BACKDROP, 0, 0, 320, 136)) { ctx.fillStyle = "#202b38"; ctx.fillRect(0, 0, 320, 136); }
+  // Bonny, shivering by the shore (a tiny shiver wobble until she's warm)
+  const shiver = state.flags.bonnyWarm ? 0 : Math.round(Math.sin(t * 22) * 0.7);
+  drawSprite(ctx, BONNY_SPRITE, 152 + shiver, 80, 1.9);
+}
+
+function paintControl(ctx: CanvasRenderingContext2D, t: number, _state: GameState) {
+  if (!drawBackdrop(ctx, CONTROL_BACKDROP, 0, 0, 320, 136)) { ctx.fillStyle = "#0f151c"; ctx.fillRect(0, 0, 320, 136); }
+  // a faint blue screen-flicker across the monitor wall
+  ctx.fillStyle = `rgba(120,170,210,${0.04 + 0.035 * Math.sin(t * 6)})`;
+  ctx.fillRect(36, 26, 248, 46);
+  drawSprite(ctx, MACK_SPRITE, 214, 80, 1.9); // Mackenzie, lurking by the racks
+}
+
+// ---- Conversations -------------------------------------------------------
+function bonnyDialogue(state: GameState): Dialogue {
+  if (!state.flags.bonnyWarm) {
+    return { speakerPortrait: BONNY_PORTRAIT_IMG, start: "cold", nodes: {
+      cold: { npc: [
+        "S-sorry — I can't really f-focus, I'm so cold.",
+        "They take your clothes at sunset. Apparently audiences don't 'connect with cardigans.'",
+        "Find me a towel — anything — and I'll tell you what I know. And I know a lot.",
+      ], choices: [ { text: "I'll find you a towel.", goto: "bye" }, { text: "What do you know?", goto: "teaser" } ] },
+      teaser: { npc: ["Watch the water. That's all I've got until I can feel my hands. Towel. Please."], choices: [ { text: "On it.", goto: "bye" } ] },
+      bye: { npc: ["Hurry? Please?"] },
+    } };
+  }
+  return { speakerPortrait: BONNY_PORTRAIT_IMG, start: "warm", nodes: {
+    warm: { npc: [
+      "Okay. Bonny's Marine Minute, off the record.",
+      "That red in the surf is Karenia brevis — a red-tide algae bloom.",
+      "It releases brevetoxins. They aerosolize in the sea spray: burns your eyes and throat, kills the fish you can already smell.",
+    ], choices: [
+      { text: "Is it dangerous to us?", goto: "danger" },
+      { text: "Why is it happening here?", goto: "why" },
+      { text: "Twelve million followers, huh?", goto: "fame" },
+      { text: "(Leave)", goto: "bye" },
+    ] },
+    danger: { npc: ["A few hours on a beach? Itchy and miserable. A whole cast sleeping outdoors with no clothes for a season? That's not a dating show, that's an exposure study with a hot tub."], choices: [ { text: "Tell me more.", goto: "warm" }, { text: "(Leave)", goto: "bye" } ] },
+    why: { npc: ["Warm water, fertilizer runoff, and nobody at the wheel.", "Speaking of which — have you actually met a producer? Because I haven't. There's a door by the pool that hums."], choices: [ { text: "A door that hums?", goto: "door" }, { text: "(Leave)", goto: "bye" } ] },
+    door: { npc: ["By the pool deck. Locked. Whatever runs this show is behind it.", "Get in there. I think you'll hate what you find — and you should."], choices: [ { text: "(Leave)", goto: "bye" } ] },
+    fame: { npc: ["Twelve point three. I did a marine-biology PhD and the algorithm decided my niche was 'shivers prettily.' So. Here we are."], choices: [ { text: "(Leave)", goto: "bye" } ] },
+    bye: { npc: ["Stay out of the spray."] },
+  } };
+}
+
+function mackDialogue(): Dialogue {
+  return { speakerPortrait: MACK_PORTRAIT_IMG, start: "hi", nodes: {
+    hi: { npc: [
+      "Oh good, another contestant. Welcome to the brain of the operation. It's basically a Raspberry Pi.",
+      "There are no producers, dude. No network notes. There's this.",
+    ], choices: [
+      { text: "No producers? Explain.", goto: "auto" },
+      { text: "What are you doing in here?", goto: "doing" },
+      { text: "Nice... everything.", goto: "metal" },
+      { text: "(Leave)", goto: "bye" },
+    ] },
+    auto: { npc: ["The whole show's automated. Casting, editing, who gets eliminated, when the lights go sexy-red — one model, end to end.", "Read the prompt on the terminal. Four lines. It's deranged."], choices: [ { text: "I'll read it.", goto: "bye" }, { text: "(Leave)", goto: "bye" } ] },
+    doing: { npc: ["Looking for the off switch. There isn't one — just a feedback slider labeled SEXY, and it only goes up.", "I unplugged it once. It filmed me unplugging it and cut it into a redemption arc."], choices: [ { text: "Grim.", goto: "hi" }, { text: "(Leave)", goto: "bye" } ] },
+    metal: { npc: ["Korn saved my life and this show is trying to undo it. I brought one real opinion in here and they keep editing me into 'the moody one.'"], choices: [ { text: "(Leave)", goto: "bye" } ] },
+    bye: { npc: ["Read the prompt. Then try to unsee it."] },
+  } };
 }
 
 // The static SET only — no gameplay objects. Used when no painted backdrop is
