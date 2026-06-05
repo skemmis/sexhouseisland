@@ -12,7 +12,9 @@
     "gen": "tsx scripts/generate-sprite.ts",
     "gen:walk": "tsx scripts/generate-walk.ts",
     "gen:portrait": "tsx scripts/generate-portrait.ts",
-    "gen:bg": "tsx scripts/generate-bg.ts"
+    "gen:bg": "tsx scripts/generate-bg.ts",
+    "gen:variants": "tsx scripts/gen-variants.ts",
+    "bake:variant": "tsx scripts/bake-variant.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0"
