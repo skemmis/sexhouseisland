@@ -24,6 +24,9 @@ let PLAYER_PORTRAIT: { neutral: PixelSprite; talking: PixelSprite } | undefined;
 let state: GameState;
 let player: SpriteCharacter;
 let playerFace: Backdrop;
+let screen: "title" | "playing" = "title";
+let gameTitle = "Game";
+let saveKey = "slopp:save";
 
 // ---- internal "virtual" resolution (classic SCUMM-ish 320x200) ----
 const VW = 320;
@@ -177,6 +180,7 @@ function runResult(r: ActionResult) {
   }
   if (r.goto) changeRoom(r.goto.room, r.goto.entry, r.goto.face ?? 0);
   if (r.say) say(r.say, playerSpeechPos(), "player", playerFace);
+  saveGame(); // persist after any action that may have changed state
 }
 
 // Travel between rooms: reposition the player and clear any conversation/speech.
@@ -186,6 +190,7 @@ function changeRoom(to: string, entry: { x: number; y: number }, face = 0) {
   player.walkTo({ ...entry }, face); // stop motion + set facing
   speechQueue.length = 0;
   dialogue = null;
+  saveGame(); // checkpoint on room change
 }
 
 function showDialogueNode() {
@@ -272,15 +277,16 @@ canvas.addEventListener("click", (e) => {
   startMusic(); // first user gesture kicks off the soundtrack (idempotent)
   const p = toVirtual(e);
 
-  // win screen: click to restart
-  if (state.won && speechQueue.length === 0) {
-    Object.assign(state, newGame());
-    player.pos = { ...START_POS };
-    gameCut = null;
-    GAME.reset?.();
-    resetVerb();
+  // title screen: New Game / Continue
+  if (screen === "title") {
+    const b = titleButtons();
+    if (inRect(p, b.neu)) startNewGame();
+    else if (hasSave() && inRect(p, b.cont)) continueGame();
     return;
   }
+
+  // win screen: click to play again (fresh game)
+  if (state.won && speechQueue.length === 0) { startNewGame(); return; }
 
   // if speech is showing, a click skips the current line
   if (speechQueue.length > 0 && !dialogue) {
@@ -336,13 +342,75 @@ function dialogueChoiceAt(y: number): number | null {
 }
 
 // ---------------------------------------------------------------------------
+//  Title screen + save/load (localStorage — per browser, no account needed)
+// ---------------------------------------------------------------------------
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+function hasSave() { return !!localStorage.getItem(saveKey); }
+function saveGame() {
+  if (screen !== "playing") return;
+  try {
+    localStorage.setItem(saveKey, JSON.stringify({ v: 1, state, pos: player.pos }));
+  } catch { /* storage full / disabled — non-fatal */ }
+}
+function loadSavedGame(): boolean {
+  try {
+    const raw = localStorage.getItem(saveKey);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if (!s?.state?.currentRoom || !ROOMS[s.state.currentRoom]) return false;
+    Object.assign(state, s.state);
+    if (s.pos) { player.pos = { ...s.pos }; player.walkTo({ ...s.pos }, 0); }
+    return true;
+  } catch { return false; }
+}
+function startNewGame() {
+  localStorage.removeItem(saveKey);
+  Object.assign(state, newGame());
+  player.pos = { ...START_POS };
+  player.walkTo({ ...START_POS }, 0);
+  speechQueue.length = 0; dialogue = null; gameCut = null;
+  GAME.reset?.(); resetVerb();
+  screen = "playing";
+}
+function continueGame() { if (loadSavedGame()) screen = "playing"; else startNewGame(); }
+
+const TBTN = { w: 104, h: 16 };
+function titleButtons() {
+  const x = Math.round(VW / 2 - TBTN.w / 2);
+  return { neu: { x, y: 150, w: TBTN.w, h: TBTN.h }, cont: { x, y: 172, w: TBTN.w, h: TBTN.h } };
+}
+function inRect(p: { x: number; y: number }, r: { x: number; y: number; w: number; h: number }) {
+  return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+}
+function drawTitleButton(r: { x: number; y: number; w: number; h: number }, label: string, enabled: boolean) {
+  const hot = enabled && inRect(mouse, r);
+  ctx.fillStyle = !enabled ? "rgba(8,8,14,0.45)" : hot ? "#f0d060" : "rgba(8,8,14,0.82)";
+  ctx.fillRect(r.x, r.y, r.w, r.h);
+  ctx.strokeStyle = enabled ? "#f0d060" : "#555"; ctx.lineWidth = 1;
+  ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
+  const col = !enabled ? "#777" : hot ? "#1a0a2a" : "#f6dd86";
+  const w = textWidth(label, 1);
+  drawText(ctx, label, Math.round(r.x + (r.w - w) / 2), Math.round(r.y + (r.h - GLYPH_H) / 2), col, 1);
+}
+function renderTitle(t: number) {
+  if (GAME.drawTitle) GAME.drawTitle(makeApi(0, t));
+  else {
+    ctx.fillStyle = "#10131c"; ctx.fillRect(0, 0, VW, VH);
+    ctx.fillStyle = "#f0d060"; centerText(gameTitle.toUpperCase(), VW / 2, 60, 11);
+  }
+  const b = titleButtons();
+  drawTitleButton(b.neu, "NEW GAME", true);
+  drawTitleButton(b.cont, "CONTINUE", hasSave());
+}
+
+// ---------------------------------------------------------------------------
 //  Render
 // ---------------------------------------------------------------------------
 let last = performance.now();
 function frame(now: number) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  update(dt);
+  if (screen === "playing") update(dt);
   render(now / 1000);
   requestAnimationFrame(frame);
 }
@@ -408,8 +476,9 @@ function drawExitCues(t: number) {
 }
 
 function render(t: number) {
-  const room = ROOMS[state.currentRoom];
   ctx.imageSmoothingEnabled = false;
+  if (screen === "title") { renderTitle(t); return; }
+  const room = ROOMS[state.currentRoom];
 
   // scene
   const api = makeApi(0, t);
@@ -594,6 +663,8 @@ export function runGame(config: GameConfig) {
   PLAYER_PORTRAIT = config.player.portraitPixel;
   ROOMS = config.getRooms();
   START_POS = config.getStart().pos;
+  gameTitle = config.title ?? "Game";
+  saveKey = `slopp:save:${slug(gameTitle)}`;
 
   state = newGame();
   player = new SpriteCharacter({ ...START_POS }, config.player.walk, config.player.cellBase ?? 2.0, config.player.fps ?? 8);
@@ -608,8 +679,12 @@ export function runGame(config: GameConfig) {
   config.loadScenes?.().then(() => {
     ROOMS = config.getRooms();
     START_POS = config.getStart().pos;
-    Object.assign(state, newGame());
-    player.pos = { ...START_POS };
     for (const k of Object.keys(maskCache)) delete maskCache[k];
+    // Only re-seed state if we're still on the title screen; never clobber a
+    // game already in progress (e.g. the player hit Continue/New before this).
+    if (screen === "title") {
+      Object.assign(state, newGame());
+      player.pos = { ...START_POS };
+    }
   });
 }

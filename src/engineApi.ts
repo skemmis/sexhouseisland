@@ -73,6 +73,9 @@ export interface GameHooks {
   extraHotspots?(api: EngineApi): Hotspot[];
   /** Custom ending overlay (drawn when state.won). */
   winScreen?(api: EngineApi): void;
+  /** Fancy title-screen backdrop + logo (the engine draws the New/Continue
+   *  buttons on top). Optional; a plain default is used if absent. */
+  drawTitle?(api: EngineApi): void;
   /** Reset transient hook state (called on new game / restart). */
   reset?(): void;
 }

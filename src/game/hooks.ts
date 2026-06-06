@@ -79,7 +79,55 @@ function drawMike(api: EngineApi) {
   }
 }
 
+// Title screen: sunset over the villa's lagoon, a surveillance drone drifting by.
+function drawTitle(api: EngineApi) {
+  const ctx = api.ctx, W = api.VW, H = api.VH, t = api.t;
+  // sunset sky
+  const sky = ctx.createLinearGradient(0, 0, 0, 112);
+  sky.addColorStop(0, "#241445"); sky.addColorStop(0.45, "#6b2f63");
+  sky.addColorStop(0.75, "#d8624e"); sky.addColorStop(1, "#f0a85e");
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, 112);
+  // sun + soft halo
+  const sx = W / 2, sy = 92;
+  ctx.fillStyle = "rgba(255,170,90,0.35)";
+  ctx.beginPath(); ctx.arc(sx, sy, 38 + Math.sin(t * 1.5) * 2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#ffd86a";
+  ctx.beginPath(); ctx.arc(sx, sy, 30, 0, Math.PI * 2); ctx.fill();
+  // ocean
+  const sea = ctx.createLinearGradient(0, 112, 0, H);
+  sea.addColorStop(0, "#16486a"); sea.addColorStop(1, "#0b2238");
+  ctx.fillStyle = sea; ctx.fillRect(0, 112, W, H - 112);
+  // sun reflection shimmer
+  for (let i = 0; i < 10; i++) {
+    const yy = 113 + i * 2.4, ww = (28 - i * 2) + Math.sin(t * 3 + i) * 4;
+    ctx.fillStyle = `rgba(255,200,120,${Math.max(0, 0.5 - i * 0.05)})`;
+    ctx.fillRect(Math.round(sx - ww / 2), Math.round(yy), Math.max(0, Math.round(ww)), 1);
+  }
+  // palm silhouette, bottom-left
+  ctx.fillStyle = "#0a0f14";
+  ctx.fillRect(26, 72, 3, 44);
+  for (const a of [-1.15, -0.5, 0.1, 0.7, 1.25]) {
+    ctx.save(); ctx.translate(27, 73); ctx.rotate(a); ctx.fillRect(0, -1, 22, 3); ctx.restore();
+  }
+  // a drone drifting across, red light blinking
+  const dx = ((t * 18) % (W + 40)) - 20, dy = 28 + Math.sin(t * 2) * 4;
+  ctx.strokeStyle = "rgba(185,195,205,0.5)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(dx - 8, dy - 2); ctx.lineTo(dx + 8, dy - 2); ctx.stroke();
+  ctx.fillStyle = "#1c2026"; ctx.fillRect(dx - 4, dy - 1, 8, 4);
+  if (Math.sin(t * 6) > 0) { ctx.fillStyle = "#ff3b30"; ctx.fillRect(dx + 3, dy, 1, 1); }
+  // logo: drop shadow + cream fill
+  ctx.fillStyle = "#1a0a22";
+  api.centerText("SEX HOUSE", W / 2 + 1, 46, 11); api.centerText("ISLAND", W / 2 + 1, 68, 11);
+  ctx.fillStyle = "#fff0c8";
+  api.centerText("SEX HOUSE", W / 2, 45, 11); api.centerText("ISLAND", W / 2, 67, 11);
+  // tagline, gently pulsing
+  ctx.fillStyle = `rgba(255,240,200,${0.5 + 0.35 * Math.sin(t * 2.5)})`;
+  api.centerText("the villa is always watching", W / 2, 134, 5);
+}
+
 export const GAME: GameHooks = {
+  drawTitle,
+
   update(api) {
     const f = api.state.flags;
     // trigger Mike's dive the moment his last line clears (speech drained; the
