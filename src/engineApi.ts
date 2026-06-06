@@ -41,4 +41,6 @@ export interface GameHooks {
   drawWorld?(api: EngineApi): void;
   /** Custom ending overlay (drawn when state.won). */
   winScreen?(api: EngineApi): void;
+  /** Reset transient hook state (called on new game / restart). */
+  reset?(): void;
 }
