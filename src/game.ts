@@ -1,13 +1,12 @@
-import type { ActionResult, Dialogue, GameState, Item, Room, Verb } from "./types";
+import type { ActionResult, Dialogue, GameState, Item, Room, RoomData, RoomsFile, Verb } from "./types";
 import { flatFill } from "./pixels/sprite";
 import { drawSprite } from "./pixels/render";
 import { TEMPLATES } from "./pixels/templates";
-import { makeBackdrop, drawBackdrop } from "./background";
-import { POOL_DECK_BG } from "./game/poolDeckBg";
+import { makeBackdrop, drawBackdrop, type Backdrop } from "./background";
+import { BACKDROPS } from "./game/assets";
+import roomsData from "./game/rooms.json";
 import { MIKE_SPRITE } from "./game/mikeSprite";
 import { MIKE_PORTRAIT_IMG } from "./game/mikePortraitImg";
-import { BEACH_BG } from "./game/beachBg";
-import { CONTROL_BG } from "./game/controlBg";
 import { BONNY_SPRITE } from "./game/bonnySprite";
 import { BONNY_PORTRAIT_IMG } from "./game/bonnyPortraitImg";
 import { MACK_SPRITE } from "./game/mackSprite";
@@ -29,153 +28,46 @@ export const ITEMS: Record<string, Item> = {
   towel: { id: "towel", name: "beach towel", icon: "towel" },
 };
 
-// ---- The one room: the Sex House Island pool deck at dusk. Hotspots + floor
-//      band are authored over the painted backdrop (see poolDeckBg). ----
-export const DOCK: Room = {
-  id: "dock",
-  // Walkable band = the front deck in front of the pool (the painted pool sits
-  // higher up, so the floor starts below it).
-  floor: { minY: 110, maxY: 132, minScale: 0.78, maxScale: 1.18 },
-  hotspots: [
-    {
-      id: "door",
-      name: "villa door",
-      rect: { x: 6, y: 44, w: 30, h: 50 }, // painted door, left wall
-      walkTo: { x: 44, y: 118 },
-      face: 0,
-    },
-    {
-      id: "well",
-      name: "the deep end",
-      rect: { x: 104, y: 74, w: 116, h: 46 }, // the painted pool, centre
-      walkTo: { x: 150, y: 124 },
-      face: 0,
-    },
-    {
-      id: "rod",
-      name: "pool skimmer",
-      rect: { x: 94, y: 84, w: 16, h: 40 }, // skimmer overlay, leaning at pool's left
-      walkTo: { x: 100, y: 124 },
-      face: 0,
-    },
-    {
-      id: "parrot",
-      name: "pelican",
-      rect: { x: 44, y: 100, w: 40, h: 32 }, // pelican overlay, front deck
-      walkTo: { x: 66, y: 130 },
-      face: -1,
-    },
-    {
-      id: "sign",
-      name: "the lantern",
-      rect: { x: 36, y: 26, w: 16, h: 18 }, // the painted lantern by the door
-      walkTo: { x: 44, y: 118 },
-      face: 0,
-    },
-    {
-      id: "mike",
-      name: "Mike White",
-      rect: { x: 262, y: 80, w: 30, h: 44 }, // by the loungers, right
-      walkTo: { x: 250, y: 126 },
-      face: 1,
-    },
-    {
-      id: "towel",
-      name: "beach towel",
-      rect: { x: 296, y: 92, w: 22, h: 16 }, // folded on a lounger, far right
-      walkTo: { x: 290, y: 126 },
-      face: 1,
-    },
-    {
-      id: "archway",
-      name: "the archway to the beach",
-      rect: { x: 126, y: 34, w: 30, h: 38 }, // the arched passage left of the pool
-      walkTo: { x: 118, y: 126 },
-      face: 0,
-      exit: { to: "beach", entry: { x: 300, y: 122 }, face: -1 },
-    },
-  ],
-  paint: paintDock,
+// ----------------------------------------------------------------------------
+//  ROOMS are assembled from data (src/game/rooms.json — the editor-owned scene
+//  geometry) plus code hooks keyed by room id: the backdrop (resolved from a
+//  key) and the dynamic overlay painter (sprites/effects). Behavior (interact,
+//  below) is likewise keyed by hotspot id. So the editor can move any box
+//  without touching logic, and logic never depends on coordinates.
+// ----------------------------------------------------------------------------
+const ROOMS_FILE = roomsData as RoomsFile;
+
+const BG_CACHE: Record<string, Backdrop> = {};
+const bgFor = (key: string) => (BG_CACHE[key] ??= makeBackdrop(BACKDROPS[key]));
+
+// Per-room dynamic drawing (state-dependent sprites/effects), keyed by room id.
+const OVERLAYS: Record<string, (ctx: CanvasRenderingContext2D, t: number, state: GameState) => void> = {
+  dock: paintDockOverlays,
+  beach: paintBeachOverlays,
+  control: paintControlOverlays,
 };
 
-// ----------------------------------------------------------------------------
-//  THE BEACH — Bonny is here, freezing, watching the red tide come in.
-// ----------------------------------------------------------------------------
-export const BEACH: Room = {
-  id: "beach",
-  floor: { minY: 116, maxY: 133, minScale: 0.8, maxScale: 1.15 },
-  hotspots: [
-    {
-      id: "bonny",
-      name: "Bonny",
-      rect: { x: 150, y: 78, w: 30, h: 46 },
-      walkTo: { x: 140, y: 128 },
-      face: 1,
+function buildRoom(id: string, d: RoomData): Room {
+  return {
+    id,
+    floor: d.floor,
+    hotspots: d.hotspots,
+    paint: (ctx, t, state) => {
+      if (!drawBackdrop(ctx, bgFor(d.backdrop), 0, 0, 320, 136)) {
+        ctx.fillStyle = "#0f151c";
+        ctx.fillRect(0, 0, 320, 136);
+      }
+      OVERLAYS[id]?.(ctx, t, state);
     },
-    {
-      id: "redtide",
-      name: "the red tide",
-      rect: { x: 40, y: 86, w: 240, h: 22 }, // the surf line
-      walkTo: { x: 160, y: 126 },
-      face: 0,
-    },
-    {
-      id: "pooldeck",
-      name: "way back to the pool",
-      rect: { x: 0, y: 70, w: 30, h: 66 }, // the villa wall, left
-      walkTo: { x: 18, y: 126 },
-      face: -1,
-      exit: { to: "dock", entry: { x: 18, y: 126 }, face: 1 },
-    },
-  ],
-  paint: paintBeach,
-};
+  };
+}
 
-// ----------------------------------------------------------------------------
-//  THE CONTROL ROOM — behind the villa door. The show runs itself. Mackenzie
-//  has broken in and is poking around.
-// ----------------------------------------------------------------------------
-export const CONTROL: Room = {
-  id: "control",
-  floor: { minY: 112, maxY: 132, minScale: 0.78, maxScale: 1.12 },
-  hotspots: [
-    {
-      id: "terminal",
-      name: "the producer's terminal",
-      rect: { x: 132, y: 70, w: 56, h: 34 }, // the central screen/keyboard
-      walkTo: { x: 160, y: 124 },
-      face: 0,
-    },
-    {
-      id: "screens",
-      name: "the wall of feeds",
-      rect: { x: 40, y: 30, w: 240, h: 40 },
-      walkTo: { x: 160, y: 124 },
-      face: 0,
-    },
-    {
-      id: "mackenzie",
-      name: "Mackenzie",
-      rect: { x: 214, y: 78, w: 30, h: 46 },
-      walkTo: { x: 224, y: 126 },
-      face: 1,
-    },
-    {
-      id: "pooldoor",
-      name: "door to the pool deck",
-      rect: { x: 0, y: 60, w: 30, h: 76 }, // the door, left
-      walkTo: { x: 20, y: 126 },
-      face: -1,
-      exit: { to: "dock", entry: { x: 44, y: 120 }, face: 0 },
-    },
-  ],
-  paint: paintControl,
-};
+export const ROOMS: Record<string, Room> = Object.fromEntries(
+  Object.entries(ROOMS_FILE.rooms).map(([id, d]) => [id, buildRoom(id, d)]),
+);
 
-export const ROOMS: Record<string, Room> = { dock: DOCK, beach: BEACH, control: CONTROL };
-
-export const START_ROOM = "dock";
-export const START_POS = { x: 130, y: 124 };
+export const START_ROOM = ROOMS_FILE.start.room;
+export const START_POS = ROOMS_FILE.start.pos;
 
 export function newGame(): GameState {
   return { flags: {}, inventory: [], currentRoom: START_ROOM, won: false };
@@ -407,31 +299,18 @@ function itemName(id: string) {
 }
 
 // ============================================================================
-//  BACKDROP. A painted static image (image-gen, baked by `npm run gen:bg`) that
-//  the sprites move within — the Monkey Island model. Until one is generated,
-//  the room falls back to a procedural "set". Either way, state-dependent
-//  gameplay objects (pelican, pool skimmer, key glint, open-door glow) are drawn
-//  as OVERLAYS on top, so the static backdrop never has to change.
+//  OVERLAYS. State-dependent sprites/effects drawn ON TOP of each room's painted
+//  backdrop (the Monkey Island model: the static image never changes; gameplay
+//  objects ride above it). Keyed by room id in OVERLAYS above. Positions here
+//  are still code for now — placing these visually is a later editor iteration.
 // ============================================================================
-const POOL_BG = makeBackdrop(POOL_DECK_BG);
-
-function paintDock(ctx: CanvasRenderingContext2D, t: number, state: GameState) {
-  if (!drawBackdrop(ctx, POOL_BG, 0, 0, 320, 136)) paintProceduralSet(ctx, t);
-  paintOverlays(ctx, t, state);
-}
-
-const BEACH_BACKDROP = makeBackdrop(BEACH_BG);
-const CONTROL_BACKDROP = makeBackdrop(CONTROL_BG);
-
-function paintBeach(ctx: CanvasRenderingContext2D, t: number, state: GameState) {
-  if (!drawBackdrop(ctx, BEACH_BACKDROP, 0, 0, 320, 136)) { ctx.fillStyle = "#202b38"; ctx.fillRect(0, 0, 320, 136); }
+function paintBeachOverlays(ctx: CanvasRenderingContext2D, t: number, state: GameState) {
   // Bonny, shivering by the shore (a tiny shiver wobble until she's warm)
   const shiver = state.flags.bonnyWarm ? 0 : Math.round(Math.sin(t * 22) * 0.7);
   drawSprite(ctx, BONNY_SPRITE, 152 + shiver, 80, 1.9);
 }
 
-function paintControl(ctx: CanvasRenderingContext2D, t: number, _state: GameState) {
-  if (!drawBackdrop(ctx, CONTROL_BACKDROP, 0, 0, 320, 136)) { ctx.fillStyle = "#0f151c"; ctx.fillRect(0, 0, 320, 136); }
+function paintControlOverlays(ctx: CanvasRenderingContext2D, t: number, _state: GameState) {
   // a faint blue screen-flicker across the monitor wall
   ctx.fillStyle = `rgba(120,170,210,${0.04 + 0.035 * Math.sin(t * 6)})`;
   ctx.fillRect(36, 26, 248, 46);
@@ -488,61 +367,10 @@ function mackDialogue(): Dialogue {
   } };
 }
 
-// The static SET only — no gameplay objects. Used when no painted backdrop is
-// baked in yet. (The painted image, when present, replaces this entirely.)
-function paintProceduralSet(ctx: CanvasRenderingContext2D, t: number) {
-  const sky = ctx.createLinearGradient(0, 0, 0, 96);
-  sky.addColorStop(0, "#10131f");
-  sky.addColorStop(1, "#39314f");
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, 320, 96);
-
-  ctx.fillStyle = "#f0ecd0";
-  ctx.beginPath(); ctx.arc(280, 26, 14, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#39314f";
-  ctx.beginPath(); ctx.arc(286, 22, 12, 0, Math.PI * 2); ctx.fill();
-
-  ctx.fillStyle = "#fff";
-  for (let i = 0; i < 40; i++) {
-    if (Math.sin(t * 2 + i) > 0.3) ctx.fillRect((i * 71) % 320, (i * 37) % 70, 1, 1);
-  }
-
-  ctx.fillStyle = "#1d3a4a";
-  ctx.fillRect(0, 70, 320, 20);
-  ctx.fillStyle = "rgba(240,236,208,0.15)";
-  for (let i = 0; i < 6; i++) ctx.fillRect((t * 8 + i * 40) % 320, 72 + i * 3, 10, 1);
-
-  // villa wall + closed door + window
-  ctx.fillStyle = "#cdbfa6"; ctx.fillRect(0, 30, 80, 70);
-  ctx.fillStyle = "#b6a487"; ctx.fillRect(0, 28, 80, 4);
-  ctx.fillStyle = "#5a4632"; ctx.fillRect(28, 40, 34, 56);
-  ctx.fillStyle = "#caa54a"; ctx.fillRect(54, 66, 3, 3);
-  ctx.fillStyle = "#e8c86a"; ctx.fillRect(8, 44, 14, 12);
-
-  // deck
-  ctx.fillStyle = "#b9ac90"; ctx.fillRect(0, 90, 320, 46);
-  ctx.fillStyle = "#a59879";
-  for (let x = 0; x < 320; x += 20) ctx.fillRect(x, 90, 1, 46);
-  for (let y = 96; y < 136; y += 14) ctx.fillRect(0, y, 320, 1);
-
-  // pool (no glint — that's an overlay)
-  ctx.fillStyle = "#cdbfa6"; ctx.fillRect(148, 84, 48, 4);
-  ctx.fillStyle = "#2f7fb0"; ctx.fillRect(150, 88, 44, 22);
-  ctx.fillStyle = "#1d5f8a"; ctx.fillRect(156, 94, 32, 14);
-  ctx.fillStyle = "rgba(255,255,255,0.18)";
-  for (let i = 0; i < 4; i++) ctx.fillRect(154 + ((t * 6 + i * 12) % 36), 90 + i * 4, 6, 1);
-
-  // sign + lounger
-  ctx.fillStyle = "#8a7250"; ctx.fillRect(104, 90, 4, 16);
-  ctx.fillStyle = "#d24a6a"; ctx.fillRect(96, 78, 22, 14);
-  ctx.fillStyle = "#fff"; ctx.fillRect(99, 82, 16, 1); ctx.fillRect(99, 85, 12, 1);
-  ctx.fillStyle = "#e8e2d4"; ctx.fillRect(244, 100, 30, 8);
-  ctx.fillStyle = "#cfc7b4"; ctx.fillRect(244, 100, 30, 2);
-}
 
 // State-dependent objects, drawn over the painted backdrop. Positioned to match
 // the painted layout (pelican on the front deck, skimmer at the pool's left).
-function paintOverlays(ctx: CanvasRenderingContext2D, _t: number, state: GameState) {
+function paintDockOverlays(ctx: CanvasRenderingContext2D, _t: number, state: GameState) {
   drawSprite(ctx, PELICAN_SPRITE, 48, 102, 1.8); // on the front deck, foreground
 
   // Mike White, lounging by the pool — hidden once he's gone, or while the

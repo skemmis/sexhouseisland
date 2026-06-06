@@ -69,6 +69,20 @@ export interface Room {
   paint: (ctx: CanvasRenderingContext2D, t: number, state: GameState) => void;
 }
 
+/** Pure scene geometry — the editor-owned data that lives in rooms.json. */
+export interface RoomData {
+  /** Backdrop key, resolved to an image via src/game/assets.ts. */
+  backdrop: string;
+  floor: { minY: number; maxY: number; minScale: number; maxScale: number };
+  hotspots: Hotspot[];
+}
+
+/** The shape of rooms.json. */
+export interface RoomsFile {
+  start: { room: string; pos: Vec };
+  rooms: Record<string, RoomData>;
+}
+
 /** Mutable world state — the save game, essentially. */
 export interface GameState {
   flags: Record<string, boolean>;
