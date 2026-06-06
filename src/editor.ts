@@ -195,22 +195,36 @@ async function postRooms(token: string) {
 }
 async function doSave() {
   masks[roomId] && (room().walk = encodeMask(mask()));
+  statusEl().className = "dirty";
+  statusEl().textContent = "saving…";
   try {
     let token = localStorage.getItem("slopp_admin_token") ?? "";
     let r = await postRooms(token);
-    if (r.status === 401) { // gated deploy: ask for the token once, remember it
-      token = prompt("Admin token to save changes:") ?? "";
+    if (r.status === 401) { // gated deploy: token missing/wrong — clear & re-ask
+      localStorage.removeItem("slopp_admin_token");
+      token = prompt("Save is password-protected. Enter the admin token:") ?? "";
       localStorage.setItem("slopp_admin_token", token);
       r = await postRooms(token);
     }
-    if (!r.ok) throw new Error(await r.text());
+    if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
     setDirty(false);
     statusEl().textContent = "saved ✓";
   } catch (e) {
-    statusEl().className = "dirty";
-    statusEl().textContent = "save failed (run the server / check token) — " + (e as Error).message;
+    // LOUD failure: never let a save fail quietly (this once silently ate edits).
+    setDirty(true); // keep the unsaved flag raised
+    statusEl().textContent = "⚠ SAVE FAILED — NOT saved";
+    alert(
+      "⚠️ SAVE FAILED — your changes were NOT saved.\n\n" +
+      (e as Error).message +
+      "\n\nFix the cause (admin token, or the server) and Save again BEFORE closing this tab.",
+    );
   }
 }
+
+// Guard against closing/reloading with unsaved edits (the other way work was lost).
+window.addEventListener("beforeunload", (e) => {
+  if (dirty) { e.preventDefault(); e.returnValue = ""; }
+});
 
 // ---------------------------------------------------------------------------
 //  Painting the walk mask
