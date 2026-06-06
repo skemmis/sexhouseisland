@@ -30,7 +30,7 @@ const images: Record<string, HTMLImageElement> = {};
 type Sel = { kind: "hotspot" | "walkTo" | "floorMin" | "floorMax" | "prop"; i?: number } | null;
 let sel: Sel = null;
 let layer: "hotspots" | "props" = "hotspots"; // which set the Select tool edits
-type Drag = { mode: "move" | "resize" | "walkTo" | "floor" | "paint" | "vertex"; handle?: string; vi?: number; ox: number; oy: number; orig?: any } | null;
+type Drag = { mode: "move" | "resize" | "walkTo" | "floor" | "paint" | "vertex" | "scale"; handle?: string; vi?: number; ox: number; oy: number; orig?: any } | null;
 let drag: Drag = null;
 
 const room = () => file.rooms[roomId];
@@ -211,9 +211,13 @@ canvas.addEventListener("pointerdown", (e) => {
   if (tool === "paint" || tool === "erase") { drag = { mode: "paint", ox: 0, oy: 0 }; paintAt(p, tool === "paint"); return; }
   if (tool === "addpt") { addPoint(p); return; }
   const r = room();
-  // SPRITES layer: select/move props
+  // SPRITES layer: resize handle of the selected prop, else select/move
   if (layer === "props") {
     const props = r.props ?? [];
+    if (sel?.kind === "prop" && sel.i != null) {
+      const b = propBox(props[sel.i]);
+      if (near(p.x, b.x + b.w, 3) && near(p.y, b.y + b.h, 3)) { drag = { mode: "scale", ox: 0, oy: 0 }; return; }
+    }
     for (let i = props.length - 1; i >= 0; i--) if (inProp(p, props[i])) { sel = { kind: "prop", i }; drag = { mode: "move", ox: p.x - props[i].x, oy: p.y - props[i].y }; return; }
     sel = null; return;
   }
@@ -241,7 +245,12 @@ canvas.addEventListener("pointermove", (e) => {
   if (drag.mode === "paint") { paintAt(p, tool === "paint"); return; }
   if (sel?.kind === "prop" && sel.i != null && r.props) {
     const pr = r.props[sel.i];
-    pr.x = clampI(rx - Math.round(drag.ox), 0, SX); pr.y = clampI(ry - Math.round(drag.oy), 0, SY);
+    if (drag.mode === "scale") {
+      const w = SPRITES[pr.sprite]?.w ?? 8;
+      pr.scale = Math.max(0.3, Math.min(6, Math.round(((rx - pr.x) / w) * 20) / 20)); // 0.05 steps
+    } else {
+      pr.x = clampI(rx - Math.round(drag.ox), 0, SX); pr.y = clampI(ry - Math.round(drag.oy), 0, SY);
+    }
     setDirty(); return;
   }
   if (sel?.kind === "hotspot" && sel.i != null) {
@@ -268,6 +277,12 @@ canvas.addEventListener("pointerup", () => { drag = null; });
 canvas.addEventListener("pointerleave", () => { mouse.in = false; });
 
 window.addEventListener("keydown", (e) => {
+  // [ / ] resize the selected prop
+  if ((e.key === "[" || e.key === "]") && sel?.kind === "prop" && sel.i != null && room().props) {
+    const p = room().props![sel.i];
+    p.scale = Math.max(0.3, Math.min(6, Math.round((p.scale + (e.key === "]" ? 0.05 : -0.05)) * 20) / 20));
+    e.preventDefault(); setDirty(); return;
+  }
   const d = e.shiftKey ? 10 : 1;
   const dx = e.key === "ArrowLeft" ? -d : e.key === "ArrowRight" ? d : 0;
   const dy = e.key === "ArrowUp" ? -d : e.key === "ArrowDown" ? d : 0;
@@ -340,7 +355,8 @@ function frame() {
     ctx.lineWidth = selp ? 2 : 1;
     ctx.strokeStyle = selp ? "#ff8af0" : layer === "props" ? "rgba(255,140,240,0.55)" : "rgba(255,140,240,0.2)";
     ctx.strokeRect(b.x * S + 0.5, b.y * S + 0.5, b.w * S - 1, b.h * S - 1);
-    if (layer === "props") label2(pr.id, b.x * S + 1, b.y * S - 2, "#ffb0ee");
+    if (layer === "props") label2(pr.id + (selp ? `  ×${pr.scale}` : ""), b.x * S + 1, b.y * S - 2, "#ffb0ee");
+    if (selp) { ctx.fillStyle = "#6fe3ff"; ctx.fillRect((b.x + b.w) * S - 3, (b.y + b.h) * S - 3, 6, 6); } // resize handle
   });
 
   // hotspots
