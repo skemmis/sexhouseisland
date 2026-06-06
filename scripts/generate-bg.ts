@@ -27,6 +27,14 @@ const PORTRAIT_AD =
   "LucasArts dialogue close-up. One single character, centered, facing the " +
   "viewer, expressive cartoon features, on a simple dark plain background. No text.";
 
+const TITLE_AD =
+  `${ART_DIRECTION}\n\n` +
+  "Render a 16-bit pixel-art GAME TITLE SCREEN — a wide cinematic establishing " +
+  "shot. Paint the game's title as a bold, playful hand-lettered LOGO reading " +
+  "exactly “SEX HOUSE ISLAND”, large and centered in the upper half, fully " +
+  "legible and correctly spelled. Keep the lower third darker and uncluttered for " +
+  "menu buttons. No other text, no watermark, no people or characters.";
+
 async function genOpenAI(full: string, size: string): Promise<Buffer> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error("OPENAI_API_KEY not set");
@@ -122,6 +130,7 @@ async function main() {
   const provider = (arg("--provider", process.env.BG_PROVIDER) ?? "openai").toLowerCase();
   const kind = (arg("--kind", "backdrop") ?? "backdrop").toLowerCase();
   const portrait = kind === "portrait";
+  const title = kind === "title";
   const w = +(arg("--w", portrait ? "64" : "320")!), h = +(arg("--h", portrait ? "64" : "136")!);
   const aspect = arg("--aspect", process.env.GEMINI_ASPECT) ?? (portrait ? "1:1" : "21:9");
   const modulePath = arg("--module", "src/game/poolDeckBg.ts")!;
@@ -129,7 +138,8 @@ async function main() {
   const stem = modulePath.split("/").pop()!.replace(/\.ts$/, "");
   if (!prompt) { console.error('Usage: npm run gen:bg -- "<description>" [--kind portrait] [--provider gemini]'); process.exit(1); }
 
-  const full = `${portrait ? PORTRAIT_AD : BACKDROP_AD}\n\n${portrait ? "Character" : "Scene"}: ${prompt}`;
+  const ad = portrait ? PORTRAIT_AD : title ? TITLE_AD : BACKDROP_AD;
+  const full = `${ad}\n\n${portrait ? "Character" : "Scene"}: ${prompt}`;
   console.log(`Generating ${kind} via ${provider} …`);
   const raw =
     provider === "replicate" ? await genReplicate(full, aspect)
