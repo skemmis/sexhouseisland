@@ -16,6 +16,7 @@ export class SpriteCharacter extends Character {
     private frames: PixelSprite[],
     private cellBase = 2.0, // on-screen pixels per sprite cell at scale 1
     private fps = 8,
+    private idle?: PixelSprite, // camera-facing standing pose (walk frames are profile)
   ) {
     super(start);
   }
@@ -23,9 +24,11 @@ export class SpriteCharacter extends Character {
   override draw(ctx: CanvasRenderingContext2D, room: Room) {
     const s = this.scaleIn(room);
     const cell = this.cellBase * s;
+    // Walk frames are a side profile; when standing, face the camera (idle pose)
+    // so the character isn't frozen mid-stride in profile.
     const sprite = this.moving
       ? this.frames[Math.floor(this.animTime * this.fps) % this.frames.length]
-      : this.frames[0];
+      : (this.idle ?? this.frames[0]);
 
     const w = sprite.w * cell;
     const h = sprite.h * cell;
@@ -42,7 +45,8 @@ export class SpriteCharacter extends Character {
     // canvas transform. A negative-scale transform around a fractional x reopens
     // the same sub-pixel seams we just closed; flipping the data keeps the
     // boundary-rounded blit exact.
-    const frame = this.facing < 0 ? mirror(sprite) : sprite;
+    // mirror only the walk profile (the idle faces camera, never mirror it)
+    const frame = this.moving && this.facing < 0 ? mirror(sprite) : sprite;
     drawSprite(ctx, frame, ox, oy, cell);
   }
 }

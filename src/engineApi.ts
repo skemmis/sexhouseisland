@@ -48,6 +48,7 @@ export interface GameConfig {
   /** The player avatar. */
   player: {
     walk: PixelSprite[];
+    idle?: PixelSprite; // camera-facing standing pose (walk frames are profile)
     portraitImg?: string;                                  // Gemini portrait data URL
     portraitPixel?: { neutral: PixelSprite; talking: PixelSprite }; // fallback
     cellBase?: number; // px per sprite cell at scale 1 (default 2.0)

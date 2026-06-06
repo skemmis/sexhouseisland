@@ -667,7 +667,7 @@ export function runGame(config: GameConfig) {
   saveKey = `slopp:save:${slug(gameTitle)}`;
 
   state = newGame();
-  player = new SpriteCharacter({ ...START_POS }, config.player.walk, config.player.cellBase ?? 2.0, config.player.fps ?? 8);
+  player = new SpriteCharacter({ ...START_POS }, config.player.walk, config.player.cellBase ?? 2.0, config.player.fps ?? 8, config.player.idle);
   playerFace = makeBackdrop(config.player.portraitImg ?? "");
 
   (window as any).ITEMS = ITEMS; // expose item table for console debugging

@@ -3,9 +3,9 @@
 // them). Add cast/props here, reference them by key in the editor.
 import { flatFill, type PixelSprite } from "../pixels/sprite";
 import { TEMPLATES } from "../pixels/templates";
-import { MIKE_SPRITE } from "./mikeSprite";
-import { BONNY_SPRITE } from "./bonnySprite";
-import { MACK_SPRITE } from "./mackSprite";
+import { MIKE_SPRITE } from "./mikeTraced";
+import { BONNY_SPRITE } from "./bonnyTraced";
+import { MACK_SPRITE } from "./mackTraced";
 
 const PELICAN = flatFill(TEMPLATES.pelican.template, TEMPLATES.pelican.defaultChoice);
 
@@ -31,3 +31,12 @@ export const SPRITES: Record<string, PixelSprite> = {
   mack: MACK_SPRITE,
   towel: TOWEL,
 };
+
+// Per-sprite base scale multiplier. The traced cast is ~44 cells tall vs the old
+// 16x24, so scale them down to keep existing prop/placement scales valid.
+export const SPRITE_BASE: Record<string, number> = {
+  mike: 24 / 44,
+  bonny: 24 / 44,
+  mack: 24 / 44,
+};
+export const baseScale = (key: string) => SPRITE_BASE[key] ?? 1;

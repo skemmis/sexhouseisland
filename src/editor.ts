@@ -6,7 +6,7 @@
 // ============================================================================
 import roomsJson from "./game/rooms.json";
 import { BACKDROPS } from "./game/assets";
-import { SPRITES } from "./game/spriteRegistry";
+import { SPRITES, baseScale } from "./game/spriteRegistry";
 import { drawSprite } from "./pixels/render";
 import { PLAYER_WALK } from "./game/playerWalk";
 import { CELL, GW, GH, decodeMask, encodeMask, type WalkMask } from "./walk";
@@ -151,7 +151,7 @@ function inPolyE(p: { x: number; y: number }, poly: { x: number; y: number }[]) 
   return inside;
 }
 const hitH = (p: { x: number; y: number }, h: Hotspot) => (h.poly && h.poly.length >= 3 ? inPolyE(p, h.poly) : inRect(p, h));
-const propBox = (pr: Prop) => { const s = SPRITES[pr.sprite]; const w = (s?.w ?? 8) * pr.scale, h = (s?.h ?? 8) * pr.scale; return { x: pr.x, y: pr.y, w, h }; };
+const propBox = (pr: Prop) => { const s = SPRITES[pr.sprite]; const b = baseScale(pr.sprite); const w = (s?.w ?? 8) * pr.scale * b, h = (s?.h ?? 8) * pr.scale * b; return { x: pr.x, y: pr.y, w, h }; };
 const inProp = (p: { x: number; y: number }, pr: Prop) => { const b = propBox(pr); return p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h; };
 function vertexAt(p: { x: number; y: number }, h: Hotspot) {
   if (!h.poly) return -1;
@@ -283,7 +283,7 @@ canvas.addEventListener("pointermove", (e) => {
   if (sel?.kind === "prop" && sel.i != null && r.props) {
     const pr = r.props[sel.i];
     if (drag.mode === "scale") {
-      const w = SPRITES[pr.sprite]?.w ?? 8;
+      const w = (SPRITES[pr.sprite]?.w ?? 8) * baseScale(pr.sprite);
       pr.scale = Math.max(0.3, Math.min(6, Math.round(((rx - pr.x) / w) * 20) / 20)); // 0.05 steps
     } else {
       pr.x = clampI(rx - Math.round(drag.ox), 0, SX); pr.y = clampI(ry - Math.round(drag.oy), 0, SY);
@@ -394,7 +394,7 @@ function frame() {
   // and align them; selectable/movable in the Sprites layer.
   (r.props ?? []).forEach((pr, i) => {
     const sp = SPRITES[pr.sprite];
-    if (sp) drawSprite(ctx, sp, Math.round(pr.x * S), Math.round(pr.y * S), pr.scale * S);
+    if (sp) drawSprite(ctx, sp, Math.round(pr.x * S), Math.round(pr.y * S), pr.scale * S * baseScale(pr.sprite));
     const b = propBox(pr);
     const selp = layer === "props" && sel?.kind === "prop" && sel.i === i;
     ctx.lineWidth = selp ? 2 : 1;

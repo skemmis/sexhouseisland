@@ -2,7 +2,7 @@ import type { ActionResult, Dialogue, GameState, Item, Room, RoomData, RoomsFile
 import { drawSprite } from "./pixels/render";
 import { makeBackdrop, drawBackdrop, type Backdrop } from "./background";
 import { BACKDROPS } from "./game/assets";
-import { SPRITES } from "./game/spriteRegistry";
+import { SPRITES, baseScale } from "./game/spriteRegistry";
 import roomsData from "./game/rooms.json";
 import { MIKE_SPRITE } from "./game/mikeSprite";
 import { MIKE_PORTRAIT_IMG } from "./game/mikePortraitImg";
@@ -52,7 +52,7 @@ function drawProps(ctx: CanvasRenderingContext2D, props: RoomData["props"], stat
   for (const p of props) {
     if (p.visibleWhen && !!state.flags[p.visibleWhen.flag] !== p.visibleWhen.is) continue;
     const sp = SPRITES[p.sprite];
-    if (sp) drawSprite(ctx, sp, p.x, p.y, p.scale);
+    if (sp) drawSprite(ctx, sp, p.x, p.y, p.scale * baseScale(p.sprite));
   }
 }
 
