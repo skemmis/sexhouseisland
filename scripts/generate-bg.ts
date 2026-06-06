@@ -3,11 +3,14 @@ import { decodeImage, encodePng, fitResize, toDataUrl } from "./imageproc";
 import { ART_DIRECTION } from "../src/art";
 
 type Ref = { mimeType: string; data: string };
-/** Pull a base64 image data URL out of a .ts module (or any file) to use as a
- *  reference image for the generator — e.g. a character's portrait. */
+/** A reference image for the generator: a raw PNG/JPEG file, or a .ts module
+ *  with a baked data URL (e.g. a character's portrait). */
 function loadRef(path: string): Ref {
-  const m = readFileSync(path, "utf8").match(/data:(image\/[a-z+]+);base64,([A-Za-z0-9+/=]+)/);
-  if (!m) throw new Error(`no image data URL found in ${path}`);
+  const buf = readFileSync(path);
+  if (buf[0] === 0x89 && buf[1] === 0x50) return { mimeType: "image/png", data: buf.toString("base64") };
+  if (buf[0] === 0xff && buf[1] === 0xd8) return { mimeType: "image/jpeg", data: buf.toString("base64") };
+  const m = buf.toString("utf8").match(/data:(image\/[a-z+]+);base64,([A-Za-z0-9+/=]+)/);
+  if (!m) throw new Error(`no image found in ${path}`);
   return { mimeType: m[1], data: m[2] };
 }
 
@@ -60,14 +63,24 @@ const SPRITE_AD =
 const SHEET_AD =
   `${ART_DIRECTION}\n\n` +
   "Render a horizontal pixel-art SPRITE SHEET: the SAME single character repeated " +
-  "FOUR times in a row, evenly spaced with equal gaps, as a front-facing WALK " +
-  "CYCLE — frame 1 left leg striding forward, frame 2 legs together/passing, " +
-  "frame 3 right leg striding forward, frame 4 legs together/passing; arms " +
-  "swinging naturally opposite the legs. The character MUST be IDENTICAL in every " +
-  "frame (same size, proportions, hair, face, colours, outfit) and all four MUST " +
-  "stand on the SAME baseline with feet aligned so the frames register. Thick " +
-  "near-black outline, simple cel shading, flat solid MAGENTA (#FF00FF) background " +
-  "only. No text, no numbers, no panel borders or grid lines.";
+  "FOUR times in a row, evenly spaced with equal gaps, as a WALK CYCLE shown in a " +
+  "consistent 3/4 SIDE VIEW (the character angled toward the viewer AND to one " +
+  "side, walking across screen) so the limb motion is clearly visible — frame 1 " +
+  "left leg forward + right arm forward, frame 2 legs passing under the body, " +
+  "frame 3 right leg forward + left arm forward, frame 4 legs passing. Arms must " +
+  "SWING clearly with slightly bent elbows, opposite to the legs. The character " +
+  "MUST be IDENTICAL in every frame (same size, proportions, hair, face, colours, " +
+  "outfit) and all four MUST stand on the SAME baseline with feet aligned so the " +
+  "frames register. Thick near-black outline, simple cel shading, flat solid " +
+  "MAGENTA (#FF00FF) background only. No text, no numbers, no panel borders/grid.";
+
+const SHEET_POSE_AD =
+  `${ART_DIRECTION}\n\n` +
+  "Render a horizontal pixel-art character WALK-CYCLE sprite sheet, thick " +
+  "near-black outline, simple cel shading, on a flat solid MAGENTA (#FF00FF) " +
+  "background. Reproduce the exact frame layout and body poses from the provided " +
+  "pose-guide image (see instructions below). Same feet baseline in every frame. " +
+  "No text, no numbers, no panel borders or grid lines.";
 
 async function genOpenAI(full: string, size: string): Promise<Buffer> {
   const key = process.env.OPENAI_API_KEY;
@@ -170,8 +183,12 @@ async function main() {
   const title = kind === "title";
   const sprite = kind === "sprite";
   const sheet = kind === "sheet";
-  const refPath = arg("--ref");
-  const refs = refPath ? [loadRef(refPath)] : [];
+  // --ref may repeat; for a pose-conditioned sheet pass the pose guide FIRST,
+  // then the character-identity reference.
+  const refPaths: string[] = [];
+  process.argv.forEach((a, i) => { if (a === "--ref") refPaths.push(process.argv[i + 1]); });
+  const refs = refPaths.map(loadRef);
+  const posed = sheet && refs.length >= 2;
   const w = +(arg("--w", portrait ? "64" : "320")!), h = +(arg("--h", portrait ? "64" : "136")!);
   const aspect = arg("--aspect", process.env.GEMINI_ASPECT) ?? (portrait ? "1:1" : "21:9");
   const modulePath = arg("--module", "src/game/poolDeckBg.ts")!;
@@ -179,11 +196,17 @@ async function main() {
   const stem = modulePath.split("/").pop()!.replace(/\.ts$/, "");
   if (!prompt) { console.error('Usage: npm run gen:bg -- "<description>" [--kind portrait] [--provider gemini]'); process.exit(1); }
 
-  const ad = portrait ? PORTRAIT_AD : sprite ? SPRITE_AD : sheet ? SHEET_AD : title ? TITLE_AD : BACKDROP_AD;
-  const refNote = refs.length
-    ? "\n\nIMPORTANT: match the character shown in the provided reference image — " +
-      "same face, hairstyle, skin tone, build and outfit/colours."
-    : "";
+  const ad = portrait ? PORTRAIT_AD : sprite ? SPRITE_AD : posed ? SHEET_POSE_AD : sheet ? SHEET_AD : title ? TITLE_AD : BACKDROP_AD;
+  const refNote = posed
+    ? "\n\nThe FIRST reference image is a POSE GUIDE: reproduce its layout EXACTLY " +
+      "— same number of frames, same left-to-right positions, and the SAME body " +
+      "pose / limb positions (leg stride and arm swing) in each frame. The SECOND " +
+      "reference image is the CHARACTER IDENTITY (face, hair, skin, build, outfit). " +
+      "Paint that character into each pose. Do not change the poses or spacing."
+    : refs.length
+      ? "\n\nIMPORTANT: match the character shown in the provided reference image — " +
+        "same face, hairstyle, skin tone, build and outfit/colours."
+      : "";
   const full = `${ad}\n\n${portrait || sprite || sheet ? "Character" : "Scene"}: ${prompt}${refNote}`;
   console.log(`Generating ${kind} via ${provider}${refs.length ? ` (+${refs.length} ref)` : ""} …`);
   const raw =

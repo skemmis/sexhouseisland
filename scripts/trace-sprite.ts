@@ -22,7 +22,16 @@ const arg = (flag: string, def?: string) => {
   return i >= 0 ? process.argv[i + 1] : def;
 };
 
-const PAL = Object.entries(WORLD_PALETTE)
+// The shared dusk palette skews dark for skin, so add a few lighter warm tones
+// the snap can reach (kept out of WORLD_PALETTE so scene cohesion is unchanged).
+const SKIN_RAMP: Record<string, string> = {
+  g: "#d89a68", // mid skin
+  h: "#f0c89a", // light skin
+  i: "#ffe3c0", // skin highlight
+};
+const COLORS: Record<string, string> = { ...WORLD_PALETTE, ...SKIN_RAMP };
+
+const PAL = Object.entries(COLORS)
   .filter(([k, v]) => k !== "." && v !== "transparent")
   .map(([k, v]) => ({ k, rgb: hexToRgb(v) }));
 
@@ -74,28 +83,61 @@ function cell(img: RGBA, mask: Uint8Array, sx0: number, sx1: number, sy0: number
       if (mask[sy * img.w + sx]) { const o = (sy * img.w + sx) * 4; r += img.data[o]; g += img.data[o + 1]; b += img.data[o + 2]; opaque++; }
     }
   if (!total || opaque / total < 0.4) return ".";
-  return nearest(r / opaque, g / opaque, b / opaque);
+  return nearest(...lift(r / opaque, g / opaque, b / opaque));
 }
 
-/** Trace one frame of a sheet into a SHARED w×h canvas: scaled by a common
- *  factor (refH), feet on the bottom baseline, horizontally centered — so the
- *  frames register and don't jitter. */
-function traceFrame(img: RGBA, mask: Uint8Array, bb: { x: number; y: number; w: number; h: number }, refH: number, W: number, H: number): PixelSprite {
-  const cellsTall = Math.max(1, Math.round((H * bb.h) / refH));
-  const cellsWide = Math.max(1, Math.round((H * bb.w) / refH));
-  const top = H - cellsTall;                       // feet at the bottom
-  const left = Math.round((W - cellsWide) / 2);    // centered
+// Generated bodies come back bronzed/dark; a mild brightness lift before the
+// snap lets the lighter palette tones get chosen. Tune with --lift.
+let LIFT = 1.2;
+function lift(r: number, g: number, b: number): [number, number, number] {
+  return [Math.min(255, r * LIFT), Math.min(255, g * LIFT), Math.min(255, b * LIFT)];
+}
+
+/** Split a sheet into N frames by columns of opaque pixels (ignoring a thin
+ *  baseline). Falls back to equal columns if it can't find exactly N clusters. */
+function findFrames(img: RGBA, mask: Uint8Array, n: number): { x0: number; x1: number }[] {
+  const col = new Array(img.w).fill(0);
+  for (let y = 0; y < img.h; y++) for (let x = 0; x < img.w; x++) if (mask[y * img.w + x]) col[x]++;
+  const minOcc = Math.max(4, img.h * 0.04); // a real figure column, not the ground line
+  const runs: [number, number][] = [];
+  let s = -1;
+  for (let x = 0; x < img.w; x++) {
+    if (col[x] > minOcc) { if (s < 0) s = x; }
+    else if (s >= 0) { runs.push([s, x]); s = -1; }
+  }
+  if (s >= 0) runs.push([s, img.w]);
+  const big = runs.filter(([a, b]) => b - a > img.w / (n * 4));
+  if (big.length === n) return big.map(([a, b]) => ({ x0: a, x1: b }));
+  const colW = Math.floor(img.w / n);
+  return Array.from({ length: n }, (_, f) => ({ x0: f * colW, x1: f * colW + colW }));
+}
+
+/** Horizontal centre of mass of the opaque pixels in [x0,x1) — stable (torso-
+ *  dominated) so aligning to it keeps the body still while limbs swing. */
+function centroidX(img: RGBA, mask: Uint8Array, x0: number, x1: number): number {
+  let sum = 0, n = 0;
+  for (let y = 0; y < img.h; y++) for (let x = x0; x < x1; x++) if (mask[y * img.w + x]) { sum += x; n++; }
+  return n ? sum / n : (x0 + x1) / 2;
+}
+
+/** Trace one frame into a shared W×H canvas: FIXED full height (no per-frame
+ *  vertical scale → no bounce) and aligned by centroid (no horizontal jitter),
+ *  so only the limbs move between frames. */
+function traceFrame(img: RGBA, mask: Uint8Array, bb: { x: number; y: number; w: number; h: number }, cx: number, W: number, H: number): PixelSprite {
+  const scale = bb.h / H; // source px per cell, uniform across frames
+  const cellsWide = Math.min(W, Math.max(1, Math.round(bb.w / scale)));
+  const left = Math.round(W / 2 - (cx - bb.x) / scale); // map centroid to centre
   const palette: Record<string, string> = { ".": "transparent" };
   const rows: string[] = [];
   for (let y = 0; y < H; y++) {
     let row = "";
     for (let x = 0; x < W; x++) {
-      const lx = x - left, ly = y - top;
-      if (lx < 0 || lx >= cellsWide || ly < 0 || ly >= cellsTall) { row += "."; continue; }
-      const sx0 = bb.x + Math.floor((lx * bb.w) / cellsWide), sx1 = bb.x + Math.max(Math.floor((lx * bb.w) / cellsWide) + 1, Math.floor(((lx + 1) * bb.w) / cellsWide));
-      const sy0 = bb.y + Math.floor((ly * bb.h) / cellsTall), sy1 = bb.y + Math.max(Math.floor((ly * bb.h) / cellsTall) + 1, Math.floor(((ly + 1) * bb.h) / cellsTall));
+      const lx = x - left;
+      if (lx < 0 || lx >= cellsWide) { row += "."; continue; }
+      const sx0 = bb.x + Math.floor(lx * scale), sx1 = bb.x + Math.max(Math.floor(lx * scale) + 1, Math.floor((lx + 1) * scale));
+      const sy0 = bb.y + Math.floor(y * scale), sy1 = bb.y + Math.max(Math.floor(y * scale) + 1, Math.floor((y + 1) * scale));
       const ch = cell(img, mask, sx0, sx1, sy0, sy1);
-      row += ch; if (ch !== ".") palette[ch] = WORLD_PALETTE[ch];
+      row += ch; if (ch !== ".") palette[ch] = COLORS[ch];
     }
     rows.push(row);
   }
@@ -121,8 +163,8 @@ function trace(img: RGBA, mask: Uint8Array, maxW: number, maxH: number): PixelSp
           if (mask[sy * img.w + sx]) { const o = (sy * img.w + sx) * 4; r += img.data[o]; g += img.data[o + 1]; b += img.data[o + 2]; opaque++; }
         }
       if (opaque / total < 0.4) { row += "."; continue; } // mostly background
-      const ch = nearest(r / opaque, g / opaque, b / opaque);
-      row += ch; palette[ch] = WORLD_PALETTE[ch];
+      const ch = nearest(...lift(r / opaque, g / opaque, b / opaque));
+      row += ch; palette[ch] = COLORS[ch];
     }
     rows.push(row);
   }
@@ -153,17 +195,18 @@ function main() {
   const varName = arg("--var", "PLAYER_TRACED")!;
   const maxW = +arg("--w", "40")!, maxH = +arg("--h", "44")!;
   const frames = +arg("--frames", "1")!;
+  LIFT = +arg("--lift", "1.2")!;
   const stem = outModule.split("/").pop()!.replace(/\.ts$/, "");
 
   const img = decodeImage(readFileSync(inPath));
   const mask = keyBackground(img);
 
   if (frames > 1) {
-    // Slice the sheet into N equal columns, trace each with shared registration.
-    const colW = Math.floor(img.w / frames);
-    const boxes = Array.from({ length: frames }, (_, f) => bbox(img, mask, f * colW, f * colW + colW));
-    const refH = Math.max(...boxes.map((b) => b.h)); // common scale across frames
-    const sprites = boxes.map((bb) => traceFrame(img, mask, bb, refH, maxW, maxH));
+    // Detect the N figures, trace each at a fixed height, centroid-aligned.
+    const cols = findFrames(img, mask, frames);
+    const sprites = cols.map(({ x0, x1 }) =>
+      traceFrame(img, mask, bbox(img, mask, x0, x1), centroidX(img, mask, x0, x1), maxW, maxH),
+    );
     writeFileSync(`generated/${stem}.gif`, encodeGif(sprites, 8, 14));
     sprites.forEach((s, i) => writeFileSync(`generated/${stem}-${i}.png`, encodePng(previewPng(s, 8))));
     writeFileSync(

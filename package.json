@@ -19,7 +19,8 @@
     "serve": "npm run build && node server.mjs",
     "scenes:pull": "node scripts/scenes.mjs pull",
     "scenes:push": "node scripts/scenes.mjs push",
-    "trace": "tsx scripts/trace-sprite.ts"
+    "trace": "tsx scripts/trace-sprite.ts",
+    "gen:poses": "tsx scripts/walk-poses.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0",
