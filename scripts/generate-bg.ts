@@ -1,6 +1,15 @@
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { decodeImage, encodePng, fitResize, toDataUrl } from "./imageproc";
 import { ART_DIRECTION } from "../src/art";
+
+type Ref = { mimeType: string; data: string };
+/** Pull a base64 image data URL out of a .ts module (or any file) to use as a
+ *  reference image for the generator — e.g. a character's portrait. */
+function loadRef(path: string): Ref {
+  const m = readFileSync(path, "utf8").match(/data:(image\/[a-z+]+);base64,([A-Za-z0-9+/=]+)/);
+  if (!m) throw new Error(`no image data URL found in ${path}`);
+  return { mimeType: m[1], data: m[2] };
+}
 
 // ============================================================================
 //  Generate a painted static backdrop via an image-gen API, downscale it to the
@@ -48,6 +57,18 @@ const SPRITE_AD =
   "Solid FLAT MAGENTA (#FF00FF) background ONLY — no scenery, no ground line, no " +
   "cast shadow, no text. The whole figure must be inside the frame.";
 
+const SHEET_AD =
+  `${ART_DIRECTION}\n\n` +
+  "Render a horizontal pixel-art SPRITE SHEET: the SAME single character repeated " +
+  "FOUR times in a row, evenly spaced with equal gaps, as a front-facing WALK " +
+  "CYCLE — frame 1 left leg striding forward, frame 2 legs together/passing, " +
+  "frame 3 right leg striding forward, frame 4 legs together/passing; arms " +
+  "swinging naturally opposite the legs. The character MUST be IDENTICAL in every " +
+  "frame (same size, proportions, hair, face, colours, outfit) and all four MUST " +
+  "stand on the SAME baseline with feet aligned so the frames register. Thick " +
+  "near-black outline, simple cel shading, flat solid MAGENTA (#FF00FF) background " +
+  "only. No text, no numbers, no panel borders or grid lines.";
+
 async function genOpenAI(full: string, size: string): Promise<Buffer> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error("OPENAI_API_KEY not set");
@@ -86,7 +107,7 @@ async function genReplicate(full: string, aspect: string): Promise<Buffer> {
   return Buffer.from(await (await fetch(url)).arrayBuffer());
 }
 
-async function genGemini(full: string, aspect: string): Promise<Buffer> {
+async function genGemini(full: string, aspect: string, refs: Ref[] = []): Promise<Buffer> {
   const key = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY not set");
   // Default to the latest standard "nano banana" (Nano Banana 2). For the
@@ -113,10 +134,13 @@ async function genGemini(full: string, aspect: string): Promise<Buffer> {
   const call = (withAspect: boolean) => {
     const generationConfig: Record<string, unknown> = { responseModalities: ["TEXT", "IMAGE"] };
     if (withAspect) generationConfig.imageConfig = { aspectRatio: aspect };
+    // reference images first, then the text prompt
+    const parts: unknown[] = refs.map((r) => ({ inlineData: { mimeType: r.mimeType, data: r.data } }));
+    parts.push({ text: withAspect ? full : `${full}\n\nAspect ratio ${aspect}.` });
     return fetch(url, {
       method: "POST",
       headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts: [{ text: withAspect ? full : `${full}\n\nAspect ratio ${aspect}.` }] }], generationConfig }),
+      body: JSON.stringify({ contents: [{ parts }], generationConfig }),
     });
   };
   let res = await call(true);
@@ -145,6 +169,9 @@ async function main() {
   const portrait = kind === "portrait";
   const title = kind === "title";
   const sprite = kind === "sprite";
+  const sheet = kind === "sheet";
+  const refPath = arg("--ref");
+  const refs = refPath ? [loadRef(refPath)] : [];
   const w = +(arg("--w", portrait ? "64" : "320")!), h = +(arg("--h", portrait ? "64" : "136")!);
   const aspect = arg("--aspect", process.env.GEMINI_ASPECT) ?? (portrait ? "1:1" : "21:9");
   const modulePath = arg("--module", "src/game/poolDeckBg.ts")!;
@@ -152,12 +179,16 @@ async function main() {
   const stem = modulePath.split("/").pop()!.replace(/\.ts$/, "");
   if (!prompt) { console.error('Usage: npm run gen:bg -- "<description>" [--kind portrait] [--provider gemini]'); process.exit(1); }
 
-  const ad = portrait ? PORTRAIT_AD : sprite ? SPRITE_AD : title ? TITLE_AD : BACKDROP_AD;
-  const full = `${ad}\n\n${portrait || sprite ? "Character" : "Scene"}: ${prompt}`;
-  console.log(`Generating ${kind} via ${provider} …`);
+  const ad = portrait ? PORTRAIT_AD : sprite ? SPRITE_AD : sheet ? SHEET_AD : title ? TITLE_AD : BACKDROP_AD;
+  const refNote = refs.length
+    ? "\n\nIMPORTANT: match the character shown in the provided reference image — " +
+      "same face, hairstyle, skin tone, build and outfit/colours."
+    : "";
+  const full = `${ad}\n\n${portrait || sprite || sheet ? "Character" : "Scene"}: ${prompt}${refNote}`;
+  console.log(`Generating ${kind} via ${provider}${refs.length ? ` (+${refs.length} ref)` : ""} …`);
   const raw =
     provider === "replicate" ? await genReplicate(full, aspect)
-    : provider === "gemini" ? await genGemini(full, aspect)
+    : provider === "gemini" ? await genGemini(full, aspect, refs)
     : await genOpenAI(full, portrait ? "1024x1024" : "1536x1024");
 
   writeFileSync(`generated/${stem}.raw`, raw); // keep the original for reference
