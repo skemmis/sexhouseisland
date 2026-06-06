@@ -85,6 +85,16 @@ function buildBar() {
   btn("□ To rect", false, toRectangle, poly);
   const wk = group();
   btn("Clear walk", false, () => { masks[roomId] = new Uint8Array(GW * GH); setDirty(); }, wk);
+  // depth-band scales (how big the character is at the far/near lines)
+  const dep = group();
+  const fl = room().floor;
+  const bump = (key: "minScale" | "maxScale", d: number) => () => { fl[key] = Math.max(0.2, Math.min(4, +(fl[key] + d).toFixed(2))); setDirty(); buildBar(); };
+  btn("far −", false, bump("minScale", -0.05), dep);
+  const fls = document.createElement("span"); fls.textContent = `far ×${fl.minScale}`; fls.style.opacity = "0.8"; dep.appendChild(fls);
+  btn("+", false, bump("minScale", 0.05), dep);
+  btn("near −", false, bump("maxScale", -0.05), dep);
+  const nls = document.createElement("span"); nls.textContent = `near ×${fl.maxScale}`; nls.style.opacity = "0.8"; dep.appendChild(nls);
+  btn("+", false, bump("maxScale", 0.05), dep);
   const save = group();
   btn("💾 Save", false, doSave, save);
   const st = document.createElement("span"); st.id = "status"; bar.appendChild(st); setDirty(dirty);
@@ -290,11 +300,19 @@ canvas.addEventListener("pointerup", () => { drag = null; });
 canvas.addEventListener("pointerleave", () => { mouse.in = false; });
 
 window.addEventListener("keydown", (e) => {
-  // [ / ] resize the selected prop
-  if ((e.key === "[" || e.key === "]") && sel?.kind === "prop" && sel.i != null && room().props) {
-    const p = room().props![sel.i];
-    p.scale = Math.max(0.3, Math.min(6, Math.round((p.scale + (e.key === "]" ? 0.05 : -0.05)) * 20) / 20));
-    e.preventDefault(); setDirty(); return;
+  // [ / ] resize the selected prop, or the selected depth line's scale
+  if (e.key === "[" || e.key === "]") {
+    const step = e.key === "]" ? 0.05 : -0.05;
+    if (sel?.kind === "prop" && sel.i != null && room().props) {
+      const p = room().props![sel.i];
+      p.scale = Math.max(0.3, Math.min(6, +(p.scale + step).toFixed(2)));
+      e.preventDefault(); setDirty(); return;
+    }
+    if (sel?.kind === "floorMin" || sel?.kind === "floorMax") {
+      const key = sel.kind === "floorMin" ? "minScale" : "maxScale";
+      room().floor[key] = Math.max(0.2, Math.min(4, +(room().floor[key] + step).toFixed(2)));
+      e.preventDefault(); setDirty(); buildBar(); return;
+    }
   }
   const d = e.shiftKey ? 10 : 1;
   const dx = e.key === "ArrowLeft" ? -d : e.key === "ArrowRight" ? d : 0;
