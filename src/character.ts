@@ -18,6 +18,7 @@ import type { Vec, Room } from "./types";
 export class Character {
   pos: Vec;
   private target: Vec | null = null;
+  private path: Vec[] = [];
   private speed = 60; // px/sec at scale 1
   facing = 0; // -1 left, 1 right, 0 toward camera
   animTime = 0;
@@ -33,9 +34,19 @@ export class Character {
     return this.target !== null;
   }
 
-  /** Walk to a point on the floor; `cb` fires on arrival. */
+  /** Walk straight to a point; `cb` fires on arrival. */
   walkTo(p: Vec, face: number, cb?: () => void) {
+    this.path = [];
     this.target = { ...p };
+    this.pendingFace = face;
+    this.onArrive = cb ?? null;
+  }
+
+  /** Follow a sequence of waypoints (from pathfinding); `cb` fires at the end. */
+  walkPath(points: Vec[], face: number, cb?: () => void) {
+    if (points.length === 0) { this.walkTo(this.pos, face, cb); return; }
+    this.path = points.slice();
+    this.target = { ...this.path.shift()! };
     this.pendingFace = face;
     this.onArrive = cb ?? null;
   }
@@ -60,11 +71,15 @@ export class Character {
       const step = this.speed * this.scaleIn(room) * dt;
       if (dist <= step) {
         this.pos = { ...this.target };
-        this.target = null;
-        this.facing = this.pendingFace;
-        const cb = this.onArrive;
-        this.onArrive = null;
-        cb?.();
+        if (this.path.length > 0) {
+          this.target = { ...this.path.shift()! }; // on to the next waypoint
+        } else {
+          this.target = null;
+          this.facing = this.pendingFace;
+          const cb = this.onArrive;
+          this.onArrive = null;
+          cb?.();
+        }
       } else {
         this.pos.x += (dx / dist) * step;
         this.pos.y += (dy / dist) * step;

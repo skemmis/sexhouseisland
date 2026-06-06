@@ -65,6 +65,8 @@ export interface Room {
   /** Floor band for walking + depth scaling. minY = far edge, maxY = near edge. */
   floor: { minY: number; maxY: number; minScale: number; maxScale: number };
   hotspots: Hotspot[];
+  /** Base64 walkable-area mask (see src/walk.ts); absent = free movement. */
+  walk?: string;
   /** Draws the painted backdrop. Replace with a loaded image in production. */
   paint: (ctx: CanvasRenderingContext2D, t: number, state: GameState) => void;
 }
@@ -75,6 +77,8 @@ export interface RoomData {
   backdrop: string;
   floor: { minY: number; maxY: number; minScale: number; maxScale: number };
   hotspots: Hotspot[];
+  /** Base64 walkable-area mask (see src/walk.ts); absent = free movement. */
+  walk?: string;
 }
 
 /** The shape of rooms.json. */

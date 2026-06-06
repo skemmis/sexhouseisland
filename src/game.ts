@@ -52,6 +52,7 @@ function buildRoom(id: string, d: RoomData): Room {
     id,
     floor: d.floor,
     hotspots: d.hotspots,
+    walk: d.walk,
     paint: (ctx, t, state) => {
       if (!drawBackdrop(ctx, bgFor(d.backdrop), 0, 0, 320, 136)) {
         ctx.fillStyle = "#0f151c";

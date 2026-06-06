@@ -1,6 +1,7 @@
 import { SpriteCharacter } from "./spriteCharacter";
 import { drawSprite } from "./pixels/render";
 import { Cutscene, arc } from "./cutscene";
+import { findPath, decodeMask, type WalkMask } from "./walk";
 import { MIKE_SPRITE } from "./game/mikeSprite";
 import { MIKE_TUCK } from "./game/mikeTuck";
 import { drawText, textWidth, GLYPH_H, GLYPH_W } from "./pixelfont";
@@ -180,17 +181,36 @@ function clickInScene(p: { x: number; y: number }) {
     const verb = currentVerb;
     const item = pendingItem;
     npcAnchor = { x: hs.rect.x + hs.rect.w / 2, y: hs.rect.y - 4 };
-    player.walkTo(hs.walkTo, hs.face ?? 0, () => {
+    moveTo(hs.walkTo, hs.face ?? 0, () => {
       if (hs.exit) changeRoom(hs.exit.to, hs.exit.entry, hs.exit.face ?? 0);
       else runResult(interact(verb as Verb, hs.id, state, item?.id));
       resetVerb();
     });
   } else {
-    // clamp to floor band and walk
-    const y = clamp(p.y, room.floor.minY, room.floor.maxY);
-    player.walkTo({ x: clamp(p.x, 6, VW - 6), y }, 0);
+    const mask = getMask(room);
+    // with a walk mask, pathfinding snaps to walkable ground; without one,
+    // clamp to the floor band as before.
+    const target = mask
+      ? { x: clamp(p.x, 0, VW), y: clamp(p.y, 0, SCENE_H) }
+      : { x: clamp(p.x, 6, VW - 6), y: clamp(p.y, room.floor.minY, room.floor.maxY) };
+    moveTo(target, 0);
     if (currentVerb !== "Use" && currentVerb !== "Give") resetVerb();
   }
+}
+
+// Move the player to a point, routing around obstacles if the room has a walk
+// mask; otherwise walk straight (the pre-mask behavior).
+function moveTo(target: { x: number; y: number }, face: number, cb?: () => void) {
+  const room = ROOMS[state.currentRoom];
+  const mask = getMask(room);
+  if (mask) player.walkPath(findPath(mask, player.pos, target), face, cb);
+  else player.walkTo(target, face, cb);
+}
+
+const maskCache: Record<string, WalkMask | null> = {};
+function getMask(room: typeof ROOMS[string]): WalkMask | null {
+  if (!(room.id in maskCache)) maskCache[room.id] = room.walk ? decodeMask(room.walk) : null;
+  return maskCache[room.id];
 }
 
 function resetVerb() {
