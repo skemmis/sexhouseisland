@@ -19,7 +19,7 @@ const statusEl = () => document.getElementById("status")!;
 
 let file: RoomsFile = structuredClone(roomsJson) as RoomsFile;
 let roomId = file.start.room;
-let tool: "select" | "paint" | "erase" = "select";
+let tool: "select" | "paint" | "erase" | "addpt" = "select";
 let brush = 3; // cells
 let dirty = false;
 let mouse = { x: 0, y: 0, in: false };
@@ -28,7 +28,7 @@ const images: Record<string, HTMLImageElement> = {};
 
 type Sel = { kind: "hotspot" | "walkTo" | "floorMin" | "floorMax"; i?: number } | null;
 let sel: Sel = null;
-type Drag = { mode: "move" | "resize" | "walkTo" | "floor" | "paint"; handle?: string; ox: number; oy: number; orig?: any } | null;
+type Drag = { mode: "move" | "resize" | "walkTo" | "floor" | "paint" | "vertex"; handle?: string; vi?: number; ox: number; oy: number; orig?: any } | null;
 let drag: Drag = null;
 
 const room = () => file.rooms[roomId];
@@ -74,7 +74,12 @@ function buildBar() {
   btn("+ Hotspot", false, addHotspot, hs);
   btn("Delete", false, deleteHotspot, hs);
   btn("Edit id/name/exit", false, editHotspot, hs);
-  btn("Clear walk", false, () => { masks[roomId] = new Uint8Array(GW * GH); setDirty(); }, hs);
+  const poly = group();
+  btn("◇ To polygon", false, toPolygon, poly);
+  btn("+ point", tool === "addpt", () => { tool = tool === "addpt" ? "select" : "addpt"; buildBar(); }, poly);
+  btn("□ To rect", false, toRectangle, poly);
+  const wk = group();
+  btn("Clear walk", false, () => { masks[roomId] = new Uint8Array(GW * GH); setDirty(); }, wk);
   const save = group();
   btn("💾 Save", false, doSave, save);
   const st = document.createElement("span"); st.id = "status"; bar.appendChild(st); setDirty(dirty);
@@ -121,6 +126,49 @@ function editHotspot() {
   setDirty();
 }
 
+// ---- freeform polygon ops ----
+function inPolyE(p: { x: number; y: number }, poly: { x: number; y: number }[]) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i], b = poly[j];
+    if (((a.y > p.y) !== (b.y > p.y)) && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
+}
+const hitH = (p: { x: number; y: number }, h: Hotspot) => (h.poly && h.poly.length >= 3 ? inPolyE(p, h.poly) : inRect(p, h));
+function vertexAt(p: { x: number; y: number }, h: Hotspot) {
+  if (!h.poly) return -1;
+  for (let i = 0; i < h.poly.length; i++) if (near(p.x, h.poly[i].x, 3) && near(p.y, h.poly[i].y, 3)) return i;
+  return -1;
+}
+function recomputeRect(h: Hotspot) {
+  if (!h.poly?.length) return;
+  const xs = h.poly.map((v) => v.x), ys = h.poly.map((v) => v.y);
+  h.rect = { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+}
+function toPolygon() {
+  if (sel?.kind !== "hotspot" || sel.i == null) return alert("Select a hotspot first.");
+  const h = room().hotspots[sel.i];
+  if (!h.poly) h.poly = [{ x: h.rect.x, y: h.rect.y }, { x: h.rect.x + h.rect.w, y: h.rect.y }, { x: h.rect.x + h.rect.w, y: h.rect.y + h.rect.h }, { x: h.rect.x, y: h.rect.y + h.rect.h }];
+  setDirty();
+}
+function toRectangle() {
+  if (sel?.kind !== "hotspot" || sel.i == null) return;
+  delete room().hotspots[sel.i].poly;
+  setDirty();
+}
+function addPoint(p: { x: number; y: number }) {
+  if (sel?.kind !== "hotspot" || sel.i == null) return;
+  const h = room().hotspots[sel.i];
+  if (!h.poly) { toPolygon(); return; }
+  // insert after the nearest existing vertex
+  let best = 0, bd = Infinity;
+  h.poly.forEach((v, i) => { const d = Math.hypot(v.x - p.x, v.y - p.y); if (d < bd) { bd = d; best = i; } });
+  h.poly.splice(best + 1, 0, { x: Math.round(p.x), y: Math.round(p.y) });
+  recomputeRect(h);
+  setDirty();
+}
+
 async function doSave() {
   masks[roomId] && (room().walk = encodeMask(mask()));
   try {
@@ -154,18 +202,20 @@ canvas.addEventListener("pointerdown", (e) => {
   canvas.setPointerCapture(e.pointerId);
   const p = toScene(e);
   if (tool === "paint" || tool === "erase") { drag = { mode: "paint", ox: 0, oy: 0 }; paintAt(p, tool === "paint"); return; }
+  if (tool === "addpt") { addPoint(p); return; }
   // select tool
   const r = room();
   if (sel?.kind === "hotspot" && sel.i != null) {
     const h = r.hotspots[sel.i];
-    const handle = handleAt(p, h);
-    if (handle) { drag = { mode: "resize", handle, ox: p.x, oy: p.y, orig: { ...h.rect } }; return; }
+    const vi = vertexAt(p, h); // drag a polygon vertex
+    if (vi >= 0) { drag = { mode: "vertex", vi, ox: p.x, oy: p.y }; return; }
+    if (!h.poly) { const handle = handleAt(p, h); if (handle) { drag = { mode: "resize", handle, ox: p.x, oy: p.y, orig: { ...h.rect } }; return; } }
     if (near(p.x, h.walkTo.x, 3) && near(p.y, h.walkTo.y, 3)) { drag = { mode: "walkTo", ox: p.x, oy: p.y }; return; }
   }
   if (near(p.y, r.floor.minY, 2)) { sel = { kind: "floorMin" }; drag = { mode: "floor", ox: 0, oy: 0 }; return; }
   if (near(p.y, r.floor.maxY, 2)) { sel = { kind: "floorMax" }; drag = { mode: "floor", ox: 0, oy: 0 }; return; }
   for (let i = r.hotspots.length - 1; i >= 0; i--) {
-    if (inRect(p, r.hotspots[i])) { sel = { kind: "hotspot", i }; drag = { mode: "move", ox: p.x - r.hotspots[i].rect.x, oy: p.y - r.hotspots[i].rect.y }; return; }
+    if (hitH(p, r.hotspots[i])) { sel = { kind: "hotspot", i }; drag = { mode: "move", ox: p.x - r.hotspots[i].rect.x, oy: p.y - r.hotspots[i].rect.y }; return; }
   }
   sel = null;
 });
@@ -178,7 +228,12 @@ canvas.addEventListener("pointermove", (e) => {
   if (drag.mode === "paint") { paintAt(p, tool === "paint"); return; }
   if (sel?.kind === "hotspot" && sel.i != null) {
     const h = r.hotspots[sel.i];
-    if (drag.mode === "move") { h.rect.x = clampI(rx - Math.round(drag.ox), 0, SX - h.rect.w); h.rect.y = clampI(ry - Math.round(drag.oy), 0, SY - h.rect.h); setDirty(); }
+    if (drag.mode === "move") {
+      const nx = clampI(rx - Math.round(drag.ox), 0, SX - h.rect.w), ny = clampI(ry - Math.round(drag.oy), 0, SY - h.rect.h);
+      if (h.poly) { const dx = nx - h.rect.x, dy = ny - h.rect.y; h.poly.forEach((v) => { v.x += dx; v.y += dy; }); }
+      h.rect.x = nx; h.rect.y = ny; setDirty();
+    }
+    else if (drag.mode === "vertex" && h.poly && drag.vi != null) { h.poly[drag.vi] = { x: clampI(rx, 0, SX), y: clampI(ry, 0, SY) }; recomputeRect(h); setDirty(); }
     else if (drag.mode === "walkTo") { h.walkTo.x = clampI(rx, 0, SX); h.walkTo.y = clampI(ry, 0, SY); setDirty(); }
     else if (drag.mode === "resize") { resize(h, drag.handle!, rx, ry); setDirty(); }
   }
@@ -256,17 +311,25 @@ function frame() {
     ctx.lineWidth = selected ? 2 : 1;
     ctx.strokeStyle = exit ? "#f0a33a" : selected ? "#ffe27a" : "rgba(255,255,255,0.65)";
     ctx.fillStyle = exit ? "rgba(240,163,58,0.14)" : "rgba(120,160,255,0.12)";
-    ctx.fillRect(h.rect.x * S, h.rect.y * S, h.rect.w * S, h.rect.h * S);
-    ctx.strokeRect(h.rect.x * S + 0.5, h.rect.y * S + 0.5, h.rect.w * S - 1, h.rect.h * S - 1);
-    label2(h.name + (exit ? ` → ${h.exit!.to}` : ""), h.rect.x * S + 1, h.rect.y * S - 2, exit ? "#ffd08a" : "#dfe6ff");
+    if (h.poly && h.poly.length >= 2) {
+      ctx.beginPath();
+      h.poly.forEach((v, k) => (k ? ctx.lineTo(v.x * S, v.y * S) : ctx.moveTo(v.x * S, v.y * S)));
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else {
+      ctx.fillRect(h.rect.x * S, h.rect.y * S, h.rect.w * S, h.rect.h * S);
+      ctx.strokeRect(h.rect.x * S + 0.5, h.rect.y * S + 0.5, h.rect.w * S - 1, h.rect.h * S - 1);
+    }
+    label2(h.name + (exit ? ` → ${h.exit!.to}` : "") + (h.poly ? " ◇" : ""), h.rect.x * S + 1, h.rect.y * S - 2, exit ? "#ffd08a" : "#dfe6ff");
     if (selected) {
-      // walk-to dot + tether
       ctx.strokeStyle = "rgba(120,230,150,0.7)"; ctx.beginPath();
       ctx.moveTo((h.rect.x + h.rect.w / 2) * S, (h.rect.y + h.rect.h / 2) * S); ctx.lineTo(h.walkTo.x * S, h.walkTo.y * S); ctx.stroke();
       dot(h.walkTo.x * S, h.walkTo.y * S, "#54e08c");
-      // resize handles
-      for (const [hx, hy] of [[h.rect.x, h.rect.y], [h.rect.x + h.rect.w, h.rect.y], [h.rect.x, h.rect.y + h.rect.h], [h.rect.x + h.rect.w, h.rect.y + h.rect.h]]) {
-        ctx.fillStyle = "#ffe27a"; ctx.fillRect(hx * S - 3, hy * S - 3, 6, 6);
+      if (h.poly) {
+        for (const v of h.poly) { ctx.fillStyle = "#ffe27a"; ctx.fillRect(v.x * S - 3, v.y * S - 3, 6, 6); }
+      } else {
+        for (const [hx, hy] of [[h.rect.x, h.rect.y], [h.rect.x + h.rect.w, h.rect.y], [h.rect.x, h.rect.y + h.rect.h], [h.rect.x + h.rect.w, h.rect.y + h.rect.h]]) {
+          ctx.fillStyle = "#ffe27a"; ctx.fillRect(hx * S - 3, hy * S - 3, 6, 6);
+        }
       }
     }
   });
