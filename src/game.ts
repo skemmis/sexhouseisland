@@ -519,4 +519,10 @@ function paintDockOverlays(ctx: CanvasRenderingContext2D, _t: number, state: Gam
     ctx.fillStyle = "rgba(255,210,120,0.45)";
     ctx.fillRect(8, 48, 26, 44); // warm light spilling from the open villa door
   }
+  if (!state.flags.gotTowel) {
+    // a folded beach towel draped on the right-hand lounger (the pickup item)
+    ctx.fillStyle = "#3f7d80"; ctx.fillRect(289, 64, 22, 7);
+    ctx.fillStyle = "#c0556f"; ctx.fillRect(289, 67, 22, 2);
+    ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.fillRect(289, 64, 22, 1);
+  }
 }

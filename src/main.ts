@@ -290,7 +290,7 @@ canvas.addEventListener("click", (e) => {
     const choice = dialogueChoiceAt(p.y);
     if (choice != null) {
       const c = node.choices[choice];
-      say([c.text], playerSpeechPos()); // player voices their choice
+      say([c.text], playerSpeechPos(), "player", playerFace); // player voices their choice (with portrait)
       dialogueNode = c.goto;
       showDialogueNode();
     }
