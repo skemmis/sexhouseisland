@@ -1,10 +1,10 @@
 import { SpriteCharacter } from "./spriteCharacter";
 import { drawSprite } from "./pixels/render";
-import { Cutscene, arc } from "./cutscene";
+import { Cutscene } from "./cutscene";
 import { findPath, decodeMask, type WalkMask } from "./walk";
 import { startMusic, toggleMusic, musicMuted } from "./music";
-import { MIKE_SPRITE } from "./game/mikeSprite";
-import { MIKE_TUCK } from "./game/mikeTuck";
+import { GAME } from "./game/hooks";
+import type { EngineApi } from "./engineApi";
 import { drawText, textWidth, GLYPH_H, GLYPH_W } from "./pixelfont";
 import { PLAYER_WALK } from "./game/playerWalk";
 import { PLAYER_PORTRAIT } from "./game/playerPortrait";
@@ -270,8 +270,8 @@ canvas.addEventListener("click", (e) => {
   if (state.won && speechQueue.length === 0) {
     Object.assign(state, newGame());
     player.pos = { ...START_POS };
-    mikeCut = null;
-    mikeAnim.active = false;
+    gameCut = null;
+    GAME.reset?.();
     resetVerb();
     return;
   }
@@ -341,75 +341,34 @@ function frame(now: number) {
   requestAnimationFrame(frame);
 }
 
-// --- Mike's dive cutscene ---------------------------------------------------
-type MikeAnim = { active: boolean; pose: "stand" | "tuck" | "hidden"; cx: number; cy: number; scale: number; rot: number; sx: number; sy: number; splash: number };
-const mikeAnim: MikeAnim = { active: false, pose: "stand", cx: 0, cy: 0, scale: 1.7, rot: 0, sx: 1, sy: 1, splash: 0 };
-let mikeCut: Cutscene | null = null;
+// --- engine <-> game hook bridge --------------------------------------------
+// One active game cutscene slot, advanced by the engine each frame.
+let gameCut: Cutscene | null = null;
 
-function startMikeJump(): Cutscene {
-  const start = { x: 278, y: 100 }; // centre of the static Mike (drawn at 265,80,1.7)
-  const water = { x: 165, y: 98 };  // the deep end
-  return new Cutscene([
-    // wind-up crouch (squash the standing pose)
-    { d: 0.35, on() { mikeAnim.active = true; mikeAnim.pose = "stand"; mikeAnim.splash = 0; mikeAnim.rot = 0; },
-      tween(k) { mikeAnim.cx = start.x; mikeAnim.cy = start.y + 5 * k; mikeAnim.scale = 1.7; mikeAnim.sx = 1 + 0.25 * k; mikeAnim.sy = 1 - 0.3 * k; } },
-    // the leap: arc to the water, tuck + spin, shrinking with distance
-    { d: 0.85, on() { mikeAnim.pose = "tuck"; mikeAnim.sx = 1; mikeAnim.sy = 1; },
-      tween(k) { const p = arc(start, water, 48, k); mikeAnim.cx = p.x; mikeAnim.cy = p.y; mikeAnim.scale = 1.7 - 0.95 * k; mikeAnim.rot = -k * Math.PI * 2.4; } },
-    // splash; he's gone for good
-    { d: 0.9, on() { state.flags.mikeGone = true; mikeAnim.pose = "hidden"; },
-      tween(k) { mikeAnim.splash = k; } },
-    // a beat, then the player reacts
-    { d: 0.6, on() { mikeAnim.active = false; mikeAnim.splash = 0; } },
-    { d: 0.01, on() { say(["...He's not coming back up."], playerSpeechPos(), "player", playerFace); } },
-  ]);
-}
-
-function drawSpriteT(sp: typeof MIKE_SPRITE, cx: number, cy: number, scale: number, rot: number, sx: number, sy: number) {
-  ctx.save();
-  ctx.imageSmoothingEnabled = false;
-  ctx.translate(cx, cy);
-  ctx.rotate(rot);
-  ctx.scale(scale * sx, scale * sy);
-  drawSprite(ctx, sp, -sp.w / 2, -sp.h / 2, 1);
-  ctx.restore();
-}
-
-function drawSplash(x: number, y: number, k: number) {
-  ctx.save();
-  const r = 3 + k * 20, a = 1 - k;
-  ctx.strokeStyle = `rgba(180,220,230,${a})`;
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.4, 0, 0, Math.PI * 2); ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(x, y, r * 0.55, r * 0.22, 0, 0, Math.PI * 2); ctx.stroke();
-  ctx.fillStyle = `rgba(210,235,240,${a})`;
-  for (const d of [-0.7, -0.25, 0.25, 0.7]) {
-    const dx = x + Math.sin(d) * r, dy = y - Math.cos(d) * 9 * Math.sin(Math.PI * Math.min(1, k * 1.4));
-    ctx.fillRect(Math.round(dx), Math.round(dy), 1, 2);
-  }
-  ctx.restore();
-}
-
-function drawMikeJump() {
-  if (!mikeAnim.active) return;
-  if (mikeAnim.pose !== "hidden") drawSpriteT(mikeAnim.pose === "tuck" ? MIKE_TUCK : MIKE_SPRITE, mikeAnim.cx, mikeAnim.cy, mikeAnim.scale, mikeAnim.rot, mikeAnim.sx, mikeAnim.sy);
-  if (mikeAnim.splash > 0) drawSplash(165, 100, mikeAnim.splash);
+function makeApi(dt: number, t: number): EngineApi {
+  const room = ROOMS[state.currentRoom];
+  return {
+    ctx, state, room, t, dt, VW, VH, SCENE_H,
+    playerPos: player.pos,
+    playerScale: player.scaleIn(room),
+    say: (lines) => say(lines, playerSpeechPos(), "player", playerFace),
+    drawSprite: (sp, x, y, sc) => drawSprite(ctx, sp, x, y, sc),
+    centerText: (s, cx, y, size) => centerText(s, cx, y, size),
+    speechCount: speechQueue.length,
+    dialogueActive: !!dialogue,
+    dialogueTerminal: !!dialogue && !dialogue.nodes[dialogueNode]?.choices?.length,
+    endDialogue: () => { dialogue = null; },
+    cutsceneActive: !!gameCut && !gameCut.done,
+    startCutscene: (c) => { gameCut = c; },
+  };
 }
 
 function update(dt: number) {
   const room = ROOMS[state.currentRoom];
   player.update(dt, room);
 
-  // trigger Mike's dive the moment his last line clears (speech drained, and
-  // either the dialogue has closed or we're on the terminal jump node)
-  const onTerminalNode = !!dialogue && !dialogue.nodes[dialogueNode]?.choices?.length;
-  if (state.flags.mikeJumpPending && speechQueue.length === 0 && (!dialogue || onTerminalNode) && !state.flags.mikeGone && !mikeCut) {
-    dialogue = null; // close the conversation; the dive takes over
-    state.flags.mikeJumpPending = false;
-    state.flags.mikeJumping = true;
-    mikeCut = startMikeJump();
-  }
-  if (mikeCut && !mikeCut.done) mikeCut.update(dt);
+  GAME.update?.(makeApi(dt, 0));          // game logic (arms/triggers cutscenes)
+  if (gameCut && !gameCut.done) gameCut.update(dt);
 
   // speech stays on screen until the player clicks to advance (set in the
   // click handler) — no auto-dismiss timer.
@@ -473,7 +432,7 @@ function render(t: number) {
   // scene
   room.paint(ctx, t, state);
   player.draw(ctx, room);
-  drawMikeJump(); // scripted dive, drawn over the scene
+  GAME.drawWorld?.(makeApi(0, t)); // game-specific actors (Mike's dive, etc.)
   drawExitCues(t); // show where you can leave the room
   drawDrone(t);   // the inescapable camera, in every room
 
@@ -484,18 +443,8 @@ function render(t: number) {
   // UI strip
   drawUI();
 
-  // win overlay
-  if (state.won && speechQueue.length === 0) {
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
-    ctx.fillRect(0, 0, VW, VH);
-    ctx.fillStyle = "#f0ecd0";
-    centerText("YOU BROADCAST EVERYTHING", VW / 2, 58, 11);
-    centerText("the feeds, the eliminations, the prompt itself —", VW / 2, 76, 5);
-    centerText('"make it sexy. don\'t let anything get too unsexy."', VW / 2, 88, 5);
-    centerText("the whole world is watching the watchers now.", VW / 2, 100, 5);
-    centerText("THE SHOW IS OVER.", VW / 2, 114, 7);
-    centerText("click to play again", VW / 2, 126, 5);
-  }
+  // win overlay (game-defined)
+  if (state.won && speechQueue.length === 0) GAME.winScreen?.(makeApi(0, t));
 }
 
 function drawUI() {
