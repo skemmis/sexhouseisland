@@ -7,6 +7,33 @@ import { MIKE_TUCK } from "./mikeTuck";
 import type { EngineApi, GameHooks } from "../engineApi";
 import type { PixelSprite } from "../pixels/sprite";
 
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+// The inescapable camera drone: hovers up-and-right of the player, bobbing.
+// Its position is shared by the draw + the clickable hotspot below.
+function dronePos(api: EngineApi) {
+  return {
+    x: Math.round(clamp(api.playerPos.x + 18, 12, api.VW - 12)),
+    y: Math.round(clamp(api.playerPos.y - 52 * api.playerScale - 4 + Math.sin(api.t * 4) * 1.5, 8, api.SCENE_H - 26)),
+  };
+}
+
+function drawDrone(api: EngineApi) {
+  const ctx = api.ctx;
+  const { x: cx, y: cy } = dronePos(api);
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.strokeStyle = "rgba(185,195,205,0.5)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx - 8, cy - 3.5); ctx.lineTo(cx - 2, cy - 3.5); ctx.moveTo(cx + 2, cy - 3.5); ctx.lineTo(cx + 8, cy - 3.5); ctx.stroke();
+  ctx.strokeStyle = "#3a3f48";
+  ctx.beginPath(); ctx.moveTo(cx - 5, cy - 3.5); ctx.lineTo(cx - 5, cy - 1.5); ctx.moveTo(cx + 5, cy - 3.5); ctx.lineTo(cx + 5, cy - 1.5); ctx.stroke();
+  ctx.fillStyle = "#1c2026"; ctx.fillRect(cx - 4, cy - 1, 8, 5);
+  ctx.fillStyle = "#2c313a"; ctx.fillRect(cx - 3, cy - 2, 6, 2);
+  ctx.fillStyle = "#05060a"; ctx.fillRect(cx - 1, cy + 3, 2, 2); // downward lens
+  if (Math.sin(api.t * 6) > 0) { ctx.fillStyle = "#ff3b30"; ctx.fillRect(cx + 3, cy, 1, 1); } // blinking red light
+  ctx.restore();
+}
+
 // --- Mike's dive: a spinning cannonball into the bottomless deep end ---------
 type MikeAnim = { active: boolean; pose: "stand" | "tuck" | "hidden"; cx: number; cy: number; scale: number; rot: number; sx: number; sy: number; splash: number };
 const mikeAnim: MikeAnim = { active: false, pose: "stand", cx: 0, cy: 0, scale: 1.7, rot: 0, sx: 1, sy: 1, splash: 0 };
@@ -67,6 +94,18 @@ export const GAME: GameHooks = {
 
   drawWorld(api) {
     drawMike(api);
+    drawDrone(api);
+  },
+
+  extraHotspots(api) {
+    const { x: cx, y: cy } = dronePos(api);
+    return [{
+      id: "drone",
+      name: "the drone",
+      rect: { x: cx - 9, y: cy - 5, w: 18, h: 12 },
+      walkTo: { x: clamp(api.playerPos.x, 8, api.VW - 8), y: api.playerPos.y },
+      face: 0,
+    }];
   },
 
   winScreen(api) {

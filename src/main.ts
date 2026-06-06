@@ -13,7 +13,7 @@ import { makeBackdrop, drawBackdrop, type Backdrop } from "./background";
 import {
   interact, newGame, ROOMS, START_POS, ITEMS, initScenes,
 } from "./game";
-import { VERBS, type Verb, type Dialogue, type Item } from "./types";
+import { VERBS, type Verb, type Dialogue, type Item, type Hotspot } from "./types";
 
 // ---- internal "virtual" resolution (classic SCUMM-ish 320x200) ----
 const VW = 320;
@@ -95,8 +95,9 @@ function inventoryItemAt(x: number, y: number): Item | null {
   return state.inventory[idx] ?? null;
 }
 
-// the drone's current on-screen rect, updated each frame by drawDrone
-let droneRect = { x: -99, y: -99, w: 0, h: 0 };
+// dynamic non-room hotspots the game supplies each frame (e.g. the drone),
+// refreshed in render() and clickable like room hotspots.
+let extraHotspots: Hotspot[] = [];
 
 // A hotspot is live only when its (optional) visibility condition is met.
 function hsVisible(h: { visibleWhen?: { flag: string; is: boolean } }) {
@@ -118,9 +119,8 @@ function hitHotspot(x: number, y: number, h: import("./types").Hotspot) {
 
 function hotspotAt(x: number, y: number) {
   if (y >= SCENE_H) return null;
-  // the ever-present camera drone is clickable wherever it's hovering
-  if (x >= droneRect.x && x <= droneRect.x + droneRect.w && y >= droneRect.y && y <= droneRect.y + droneRect.h)
-    return { id: "drone", name: "the drone", rect: { ...droneRect }, walkTo: { x: clamp(player.pos.x, 8, VW - 8), y: player.pos.y }, face: 0 };
+  // game-supplied dynamic hotspots (the drone) — clickable wherever they hover
+  for (const h of extraHotspots) if (hitHotspot(x, y, h)) return h;
   const room = ROOMS[state.currentRoom];
   // topmost-last wins; iterate in reverse for "closest" feel
   for (let i = room.hotspots.length - 1; i >= 0; i--) {
@@ -375,30 +375,6 @@ function update(dt: number) {
   player.talking = speechQueue.length > 0;
 }
 
-// The inescapable camera drone — hovers up-and-right of the player in every
-// room, bobbing, red light blinking. Drawn over everything; clickable anywhere.
-function drawDrone(t: number) {
-  const room = ROOMS[state.currentRoom];
-  const s = player.scaleIn(room);
-  const cx = Math.round(clamp(player.pos.x + 18, 12, VW - 12));
-  const cy = Math.round(clamp(player.pos.y - 52 * s - 4 + Math.sin(t * 4) * 1.5, 8, SCENE_H - 26));
-  ctx.save();
-  ctx.imageSmoothingEnabled = false;
-  // spinning rotors
-  ctx.strokeStyle = "rgba(185,195,205,0.5)";
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(cx - 8, cy - 3.5); ctx.lineTo(cx - 2, cy - 3.5); ctx.moveTo(cx + 2, cy - 3.5); ctx.lineTo(cx + 8, cy - 3.5); ctx.stroke();
-  ctx.strokeStyle = "#3a3f48";
-  ctx.beginPath(); ctx.moveTo(cx - 5, cy - 3.5); ctx.lineTo(cx - 5, cy - 1.5); ctx.moveTo(cx + 5, cy - 3.5); ctx.lineTo(cx + 5, cy - 1.5); ctx.stroke();
-  // body + camera lens
-  ctx.fillStyle = "#1c2026"; ctx.fillRect(cx - 4, cy - 1, 8, 5);
-  ctx.fillStyle = "#2c313a"; ctx.fillRect(cx - 3, cy - 2, 6, 2);
-  ctx.fillStyle = "#05060a"; ctx.fillRect(cx - 1, cy + 3, 2, 2); // downward lens
-  // the red light, always blinking
-  if (Math.sin(t * 6) > 0) { ctx.fillStyle = "#ff3b30"; ctx.fillRect(cx + 3, cy, 1, 1); }
-  ctx.restore();
-  droneRect = { x: cx - 9, y: cy - 5, w: 18, h: 12 };
-}
 
 // A soft bobbing chevron over each way out of the room, so exits are findable.
 function drawExitCues(t: number) {
@@ -430,11 +406,12 @@ function render(t: number) {
   ctx.imageSmoothingEnabled = false;
 
   // scene
+  const api = makeApi(0, t);
+  extraHotspots = GAME.extraHotspots?.(api) ?? []; // refresh dynamic hotspots (drone)
   room.paint(ctx, t, state);
   player.draw(ctx, room);
-  GAME.drawWorld?.(makeApi(0, t)); // game-specific actors (Mike's dive, etc.)
   drawExitCues(t); // show where you can leave the room
-  drawDrone(t);   // the inescapable camera, in every room
+  GAME.drawWorld?.(api); // game actors over the scene + cues (Mike's dive, the drone)
 
   // one consistent dialogue panel (portrait + wrapped text) above the verb bar
   if (speechQueue[0]) drawDialoguePanel(speechQueue[0], t);

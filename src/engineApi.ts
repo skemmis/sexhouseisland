@@ -2,7 +2,7 @@
 // an `EngineApi` each frame and hands it to the game's `GameHooks`, so
 // game-specific behavior (cutscenes, custom draw layers, the win screen) lives in
 // the GAME, not the engine. See docs/SLOPP-ENGINE.md.
-import type { GameState, Room, Vec } from "./types";
+import type { GameState, Hotspot, Room, Vec } from "./types";
 import type { PixelSprite } from "./pixels/sprite";
 import type { Cutscene } from "./cutscene";
 
@@ -39,6 +39,9 @@ export interface GameHooks {
   update?(api: EngineApi): void;
   /** Draw over the scene (custom actors, the drone, cutscene visuals). */
   drawWorld?(api: EngineApi): void;
+  /** Dynamic, non-room hotspots (e.g. a drone that follows the player). Computed
+   *  each frame; clickable like room hotspots. */
+  extraHotspots?(api: EngineApi): Hotspot[];
   /** Custom ending overlay (drawn when state.won). */
   winScreen?(api: EngineApi): void;
   /** Reset transient hook state (called on new game / restart). */
