@@ -20,11 +20,13 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "pg": "^8.21.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^22.5.0",
+    "@types/pg": "^8.20.0",
     "@types/pngjs": "^6.0.5",
     "jpeg-js": "^0.4.4",
     "pngjs": "^7.0.0",

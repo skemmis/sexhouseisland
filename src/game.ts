@@ -63,12 +63,28 @@ function buildRoom(id: string, d: RoomData): Room {
   };
 }
 
-export const ROOMS: Record<string, Room> = Object.fromEntries(
-  Object.entries(ROOMS_FILE.rooms).map(([id, d]) => [id, buildRoom(id, d)]),
-);
+function buildAll(f: RoomsFile): Record<string, Room> {
+  return Object.fromEntries(Object.entries(f.rooms).map(([id, d]) => [id, buildRoom(id, d)]));
+}
 
-export const START_ROOM = ROOMS_FILE.start.room;
-export const START_POS = ROOMS_FILE.start.pos;
+export let ROOMS: Record<string, Room> = buildAll(ROOMS_FILE);
+export let START_ROOM = ROOMS_FILE.start.room;
+export let START_POS = ROOMS_FILE.start.pos;
+
+// Load live scene data from the server (the editor's edits) at startup; falls
+// back to the bundled rooms.json offline / in the standalone single-file build.
+export async function initScenes(): Promise<void> {
+  try {
+    const r = await fetch("/api/rooms");
+    if (!r.ok) return;
+    const f = (await r.json()) as RoomsFile;
+    if (!f?.rooms || !f?.start) return;
+    for (const k of Object.keys(BG_CACHE)) delete BG_CACHE[k];
+    ROOMS = buildAll(f);
+    START_ROOM = f.start.room;
+    START_POS = f.start.pos;
+  } catch { /* no server reachable — keep the bundled scenes */ }
+}
 
 export function newGame(): GameState {
   return { flags: {}, inventory: [], currentRoom: START_ROOM, won: false };

@@ -10,7 +10,7 @@ import { PLAYER_PORTRAIT } from "./game/playerPortrait";
 import { PLAYER_PORTRAIT_IMG } from "./game/playerPortraitImg";
 import { makeBackdrop, drawBackdrop, type Backdrop } from "./background";
 import {
-  interact, newGame, ROOMS, START_POS, ITEMS,
+  interact, newGame, ROOMS, START_POS, ITEMS, initScenes,
 } from "./game";
 import { VERBS, type Verb, type Dialogue, type Item } from "./types";
 
@@ -618,3 +618,12 @@ function clamp(v: number, lo: number, hi: number) {
 (window as any).ITEMS = ITEMS;
 
 requestAnimationFrame(frame);
+
+// Pull live scene data (the editor's saved edits) from the server, then reset to
+// the freshly-loaded rooms. The game boots instantly on the bundled scenes and
+// swaps to live data a moment later (identical unless edited). No-op offline.
+initScenes().then(() => {
+  Object.assign(state, newGame());
+  player.pos = { ...START_POS };
+  for (const k of Object.keys(maskCache)) delete maskCache[k];
+});

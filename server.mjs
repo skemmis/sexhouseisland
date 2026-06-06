@@ -1,33 +1,71 @@
 // Hosting server (Railway): serves the built game (/) and editor (/editor),
-// and persists scene edits to src/game/rooms.json via /api/rooms.
+// and persists scene edits.
+//
+//   - If DATABASE_URL is set (Railway Postgres), scenes live in a `scenes`
+//     table (JSONB), seeded once from the bundled rooms.json.
+//   - Otherwise (local dev), scenes read/write the rooms.json file directly.
+//
+// The game and editor both use GET/POST /api/rooms, so either backend is
+// transparent to them.
 import express from "express";
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import pg from "pg";
 
 const root = dirname(fileURLToPath(import.meta.url));
-const ROOMS = resolve(root, "src/game/rooms.json");
+const ROOMS_FILE = resolve(root, "src/game/rooms.json");
 const DIST = resolve(root, "dist");
+const useDb = !!process.env.DATABASE_URL;
+
+let pool;
+async function initStore() {
+  if (!useDb) { console.log("scenes: file (rooms.json) — set DATABASE_URL for durable Postgres"); return; }
+  pool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.PGSSL === "disable" ? false : { rejectUnauthorized: false },
+  });
+  await pool.query("CREATE TABLE IF NOT EXISTS scenes (id text PRIMARY KEY, data jsonb NOT NULL, updated_at timestamptz DEFAULT now())");
+  const { rows } = await pool.query("SELECT 1 FROM scenes WHERE id='rooms'");
+  if (rows.length === 0) {
+    const seed = JSON.parse(await readFile(ROOMS_FILE, "utf8"));
+    await pool.query("INSERT INTO scenes (id, data) VALUES ('rooms', $1)", [seed]);
+    console.log("scenes: Postgres — seeded from rooms.json");
+  } else {
+    console.log("scenes: Postgres");
+  }
+}
+async function readRooms() {
+  if (useDb) { const { rows } = await pool.query("SELECT data FROM scenes WHERE id='rooms'"); return rows[0]?.data; }
+  return JSON.parse(await readFile(ROOMS_FILE, "utf8"));
+}
+async function writeRooms(data) {
+  if (useDb) {
+    await pool.query(
+      "INSERT INTO scenes (id, data, updated_at) VALUES ('rooms', $1, now()) ON CONFLICT (id) DO UPDATE SET data = $1, updated_at = now()",
+      [data],
+    );
+  } else {
+    await writeFile(ROOMS_FILE, JSON.stringify(data, null, 2) + "\n");
+  }
+}
 
 const app = express();
 app.use(express.json({ limit: "8mb" }));
 
-// --- scene data API (the editor reads/writes this) ---
 app.get("/api/rooms", async (_req, res) => {
-  try { res.type("application/json").send(await readFile(ROOMS, "utf8")); }
-  catch (e) { res.status(500).send(String(e)); }
+  try { res.json(await readRooms()); } catch (e) { res.status(500).send(String(e)); }
 });
 app.post("/api/rooms", async (req, res) => {
   const data = req.body;
   if (!data?.rooms || !data?.start) return res.status(400).send("invalid rooms file");
-  try { await writeFile(ROOMS, JSON.stringify(data, null, 2) + "\n"); res.json({ ok: true }); }
-  catch (e) { res.status(500).send(String(e)); }
+  try { await writeRooms(data); res.json({ ok: true }); } catch (e) { res.status(500).send(String(e)); }
 });
 
-// --- static game + editor ---
 app.get("/editor", (_req, res) => res.sendFile(join(DIST, "editor.html")));
 app.use(express.static(DIST));
 app.use((_req, res) => res.sendFile(join(DIST, "index.html"))); // SPA fallback
 
 const port = process.env.PORT || 3000;
+await initStore();
 app.listen(port, () => console.log(`Sex House Island → http://localhost:${port}  (game /, editor /editor)`));
