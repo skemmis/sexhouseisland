@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sex House Island — Room Editor</title>
+    <style>
+      :root { color-scheme: dark; }
+      body { margin: 0; background: #14141b; color: #e8e6df; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; }
+      #bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 10px; border-bottom: 1px solid #2a2a36; }
+      #bar .group { display: flex; gap: 4px; align-items: center; padding-right: 10px; margin-right: 4px; border-right: 1px solid #2a2a36; }
+      button { background: #232331; color: #e8e6df; border: 1px solid #3a3a4a; border-radius: 5px; padding: 5px 9px; cursor: pointer; font: inherit; }
+      button:hover { background: #2d2d40; }
+      button.on { background: #c98a2a; border-color: #e0a84a; color: #1a1209; font-weight: bold; }
+      #status { margin-left: auto; opacity: 0.8; }
+      .dirty { color: #ffcf5a; }
+      #wrap { padding: 12px; }
+      canvas { image-rendering: pixelated; border: 1px solid #2a2a36; cursor: crosshair; touch-action: none; }
+      #help { padding: 4px 12px 14px; opacity: 0.6; line-height: 1.5; max-width: 980px; }
+      kbd { background: #232331; border: 1px solid #3a3a4a; border-radius: 3px; padding: 0 4px; }
+    </style>
+  </head>
+  <body>
+    <div id="bar"></div>
+    <div id="wrap"><canvas id="ed" width="960" height="408"></canvas></div>
+    <div id="help">
+      <b>Select</b>: click a hotspot to select; drag to move, drag corners to resize; drag the green dot to move its walk-to point; drag the dashed lines to set the depth band. <kbd>←↑→↓</kbd> nudge 1px. &nbsp;
+      <b>Paint/Erase walk</b>: drag over the ground to paint where the player can walk (A* routes around the rest). &nbsp; <b>Save</b> writes <code>rooms.json</code>.
+    </div>
+    <script type="module" src="/src/editor.ts"></script>
+  </body>
+</html>

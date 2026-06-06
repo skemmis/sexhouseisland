@@ -14,12 +14,16 @@
     "gen:portrait": "tsx scripts/generate-portrait.ts",
     "gen:bg": "tsx scripts/generate-bg.ts",
     "gen:variants": "tsx scripts/gen-variants.ts",
-    "bake:variant": "tsx scripts/bake-variant.ts"
+    "bake:variant": "tsx scripts/bake-variant.ts",
+    "start": "node server.mjs",
+    "serve": "npm run build && node server.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.69.0"
+    "@anthropic-ai/sdk": "^0.69.0",
+    "express": "^5.2.1"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^22.5.0",
     "@types/pngjs": "^6.0.5",
     "jpeg-js": "^0.4.4",
@@ -28,5 +32,8 @@
     "typescript": "^5.5.4",
     "vite": "^5.4.2",
     "vite-plugin-singlefile": "^2.3.3"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

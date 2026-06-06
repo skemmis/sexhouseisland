@@ -1,37 +1,292 @@
 {
-  "start": { "room": "dock", "pos": { "x": 130, "y": 124 } },
+  "start": {
+    "room": "dock",
+    "pos": {
+      "x": 130,
+      "y": 124
+    }
+  },
   "rooms": {
     "dock": {
       "backdrop": "poolDeck",
-      "floor": { "minY": 110, "maxY": 132, "minScale": 0.78, "maxScale": 1.18 },
+      "floor": {
+        "minY": 110,
+        "maxY": 132,
+        "minScale": 0.78,
+        "maxScale": 1.18
+      },
       "hotspots": [
-        { "id": "door", "name": "villa door", "rect": { "x": 6, "y": 44, "w": 30, "h": 50 }, "walkTo": { "x": 44, "y": 118 }, "face": 0 },
-        { "id": "well", "name": "the deep end", "rect": { "x": 104, "y": 74, "w": 116, "h": 46 }, "walkTo": { "x": 150, "y": 124 }, "face": 0 },
-        { "id": "rod", "name": "pool skimmer", "rect": { "x": 94, "y": 84, "w": 16, "h": 40 }, "walkTo": { "x": 100, "y": 124 }, "face": 0 },
-        { "id": "parrot", "name": "pelican", "rect": { "x": 44, "y": 100, "w": 40, "h": 32 }, "walkTo": { "x": 66, "y": 130 }, "face": -1 },
-        { "id": "sign", "name": "the lantern", "rect": { "x": 36, "y": 26, "w": 16, "h": 18 }, "walkTo": { "x": 44, "y": 118 }, "face": 0 },
-        { "id": "mike", "name": "Mike White", "rect": { "x": 262, "y": 80, "w": 30, "h": 44 }, "walkTo": { "x": 250, "y": 126 }, "face": 1 },
-        { "id": "towel", "name": "beach towel", "rect": { "x": 296, "y": 92, "w": 22, "h": 16 }, "walkTo": { "x": 290, "y": 126 }, "face": 1 },
-        { "id": "archway", "name": "the archway to the beach", "rect": { "x": 126, "y": 34, "w": 30, "h": 38 }, "walkTo": { "x": 118, "y": 126 }, "face": 0, "exit": { "to": "beach", "entry": { "x": 300, "y": 122 }, "face": -1 } }
+        {
+          "id": "door",
+          "name": "villa door",
+          "rect": {
+            "x": 6,
+            "y": 44,
+            "w": 30,
+            "h": 50
+          },
+          "walkTo": {
+            "x": 44,
+            "y": 118
+          },
+          "face": 0
+        },
+        {
+          "id": "well",
+          "name": "the deep end",
+          "rect": {
+            "x": 104,
+            "y": 74,
+            "w": 116,
+            "h": 46
+          },
+          "walkTo": {
+            "x": 150,
+            "y": 124
+          },
+          "face": 0
+        },
+        {
+          "id": "rod",
+          "name": "pool skimmer",
+          "rect": {
+            "x": 94,
+            "y": 84,
+            "w": 16,
+            "h": 40
+          },
+          "walkTo": {
+            "x": 100,
+            "y": 124
+          },
+          "face": 0
+        },
+        {
+          "id": "parrot",
+          "name": "pelican",
+          "rect": {
+            "x": 44,
+            "y": 100,
+            "w": 40,
+            "h": 32
+          },
+          "walkTo": {
+            "x": 66,
+            "y": 130
+          },
+          "face": -1
+        },
+        {
+          "id": "sign",
+          "name": "the lantern",
+          "rect": {
+            "x": 36,
+            "y": 26,
+            "w": 16,
+            "h": 18
+          },
+          "walkTo": {
+            "x": 44,
+            "y": 118
+          },
+          "face": 0
+        },
+        {
+          "id": "mike",
+          "name": "Mike White",
+          "rect": {
+            "x": 262,
+            "y": 80,
+            "w": 30,
+            "h": 44
+          },
+          "walkTo": {
+            "x": 250,
+            "y": 126
+          },
+          "face": 1
+        },
+        {
+          "id": "towel",
+          "name": "beach towel",
+          "rect": {
+            "x": 296,
+            "y": 92,
+            "w": 22,
+            "h": 16
+          },
+          "walkTo": {
+            "x": 290,
+            "y": 126
+          },
+          "face": 1
+        },
+        {
+          "id": "archway",
+          "name": "the archway to the beach",
+          "rect": {
+            "x": 126,
+            "y": 34,
+            "w": 30,
+            "h": 38
+          },
+          "walkTo": {
+            "x": 118,
+            "y": 126
+          },
+          "face": 0,
+          "exit": {
+            "to": "beach",
+            "entry": {
+              "x": 300,
+              "y": 122
+            },
+            "face": -1
+          }
+        }
       ]
     },
     "beach": {
       "backdrop": "beach",
-      "floor": { "minY": 116, "maxY": 133, "minScale": 0.8, "maxScale": 1.15 },
+      "floor": {
+        "minY": 116,
+        "maxY": 133,
+        "minScale": 0.8,
+        "maxScale": 1.15
+      },
       "hotspots": [
-        { "id": "bonny", "name": "Bonny", "rect": { "x": 150, "y": 78, "w": 30, "h": 46 }, "walkTo": { "x": 140, "y": 128 }, "face": 1 },
-        { "id": "redtide", "name": "the red tide", "rect": { "x": 40, "y": 86, "w": 240, "h": 22 }, "walkTo": { "x": 160, "y": 126 }, "face": 0 },
-        { "id": "pooldeck", "name": "way back to the pool", "rect": { "x": 0, "y": 70, "w": 30, "h": 66 }, "walkTo": { "x": 18, "y": 126 }, "face": -1, "exit": { "to": "dock", "entry": { "x": 18, "y": 126 }, "face": 1 } }
+        {
+          "id": "bonny",
+          "name": "Bonny",
+          "rect": {
+            "x": 150,
+            "y": 78,
+            "w": 30,
+            "h": 46
+          },
+          "walkTo": {
+            "x": 140,
+            "y": 128
+          },
+          "face": 1
+        },
+        {
+          "id": "redtide",
+          "name": "the red tide",
+          "rect": {
+            "x": 40,
+            "y": 86,
+            "w": 240,
+            "h": 22
+          },
+          "walkTo": {
+            "x": 160,
+            "y": 126
+          },
+          "face": 0
+        },
+        {
+          "id": "pooldeck",
+          "name": "way back to the pool",
+          "rect": {
+            "x": 0,
+            "y": 70,
+            "w": 30,
+            "h": 66
+          },
+          "walkTo": {
+            "x": 18,
+            "y": 126
+          },
+          "face": -1,
+          "exit": {
+            "to": "dock",
+            "entry": {
+              "x": 18,
+              "y": 126
+            },
+            "face": 1
+          }
+        }
       ]
     },
     "control": {
       "backdrop": "control",
-      "floor": { "minY": 112, "maxY": 132, "minScale": 0.78, "maxScale": 1.12 },
+      "floor": {
+        "minY": 112,
+        "maxY": 132,
+        "minScale": 0.78,
+        "maxScale": 1.12
+      },
       "hotspots": [
-        { "id": "terminal", "name": "the producer's terminal", "rect": { "x": 132, "y": 70, "w": 56, "h": 34 }, "walkTo": { "x": 160, "y": 124 }, "face": 0 },
-        { "id": "screens", "name": "the wall of feeds", "rect": { "x": 40, "y": 30, "w": 240, "h": 40 }, "walkTo": { "x": 160, "y": 124 }, "face": 0 },
-        { "id": "mackenzie", "name": "Mackenzie", "rect": { "x": 214, "y": 78, "w": 30, "h": 46 }, "walkTo": { "x": 224, "y": 126 }, "face": 1 },
-        { "id": "pooldoor", "name": "door to the pool deck", "rect": { "x": 0, "y": 60, "w": 30, "h": 76 }, "walkTo": { "x": 20, "y": 126 }, "face": -1, "exit": { "to": "dock", "entry": { "x": 44, "y": 120 }, "face": 0 } }
+        {
+          "id": "terminal",
+          "name": "the producer's terminal",
+          "rect": {
+            "x": 132,
+            "y": 70,
+            "w": 56,
+            "h": 34
+          },
+          "walkTo": {
+            "x": 160,
+            "y": 124
+          },
+          "face": 0
+        },
+        {
+          "id": "screens",
+          "name": "the wall of feeds",
+          "rect": {
+            "x": 40,
+            "y": 30,
+            "w": 240,
+            "h": 40
+          },
+          "walkTo": {
+            "x": 160,
+            "y": 124
+          },
+          "face": 0
+        },
+        {
+          "id": "mackenzie",
+          "name": "Mackenzie",
+          "rect": {
+            "x": 214,
+            "y": 78,
+            "w": 30,
+            "h": 46
+          },
+          "walkTo": {
+            "x": 224,
+            "y": 126
+          },
+          "face": 1
+        },
+        {
+          "id": "pooldoor",
+          "name": "door to the pool deck",
+          "rect": {
+            "x": 0,
+            "y": 60,
+            "w": 30,
+            "h": 76
+          },
+          "walkTo": {
+            "x": 20,
+            "y": 126
+          },
+          "face": -1,
+          "exit": {
+            "to": "dock",
+            "entry": {
+              "x": 44,
+              "y": 120
+            },
+            "face": 0
+          }
+        }
       ]
     }
   }
