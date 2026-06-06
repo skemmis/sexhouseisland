@@ -29,11 +29,15 @@ const PORTRAIT_AD =
 
 const TITLE_AD =
   `${ART_DIRECTION}\n\n` +
-  "Render a 16-bit pixel-art GAME TITLE SCREEN — a wide cinematic establishing " +
-  "shot. Paint the game's title as a bold, playful hand-lettered LOGO reading " +
-  "exactly “SEX HOUSE ISLAND”, large and centered in the upper half, fully " +
-  "legible and correctly spelled. Keep the lower third darker and uncluttered for " +
-  "menu buttons. No other text, no watermark, no people or characters.";
+  "Render a 16-bit pixel-art GAME TITLE SCREEN — a FULL-BLEED cinematic " +
+  "establishing shot that fills the ENTIRE frame edge to edge (no black bands, " +
+  "no borders, no empty margins). Paint the game's title as a large, legible, " +
+  "correctly-spelled hand-lettered LOGO reading exactly “SEX HOUSE ISLAND” in the " +
+  "upper half. Compose the lower-center a little calmer (menu buttons get added " +
+  "later by the engine) but keep painting real scenery there — do NOT leave a " +
+  "flat dark band. CRITICAL: do NOT draw any buttons, menus, UI, boxes, or " +
+  "interface — paint ONLY the scene and the title logo. No other text besides " +
+  "the logo, no watermark, no people or characters.";
 
 async function genOpenAI(full: string, size: string): Promise<Buffer> {
   const key = process.env.OPENAI_API_KEY;
