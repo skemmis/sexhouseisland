@@ -456,30 +456,7 @@
             "x": 160,
             "y": 118
           },
-          "face": 0,
-          "visibleWhen": {
-            "flag": "gotFish",
-            "is": false
-          }
-        },
-        {
-          "id": "emptyfreezer",
-          "name": "the chest freezer",
-          "rect": {
-            "x": 120,
-            "y": 52,
-            "w": 86,
-            "h": 60
-          },
-          "walkTo": {
-            "x": 160,
-            "y": 118
-          },
-          "face": 0,
-          "visibleWhen": {
-            "flag": "gotFish",
-            "is": true
-          }
+          "face": 0
         },
         {
           "id": "snacksign",

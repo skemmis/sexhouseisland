@@ -213,9 +213,6 @@ export function interact(
           effect: (s) => { s.inventory.push(ITEMS.fish); s.flags.gotFish = true; } };
       }
       return { say: [`I can't ${verb.toLowerCase()} the freezer.`] };
-    case "emptyfreezer":
-      if (verb === "Look at") return { say: ["Empty but for a bag of SEXY ICE. I already took the fish."] };
-      return { say: ["Nothing left in there worth taking."] };
 
     case "snacksign":
       if (verb === "Look at" || verb === "Use") return { say: ["A buzzing neon sign: SEXY SNACKS. Below it, an AI-printed menu: 'deconstructed seduction,' 'flirtini foam,' 'consent crudités.'"] };
