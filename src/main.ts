@@ -2,6 +2,7 @@ import { SpriteCharacter } from "./spriteCharacter";
 import { drawSprite } from "./pixels/render";
 import { Cutscene, arc } from "./cutscene";
 import { findPath, decodeMask, type WalkMask } from "./walk";
+import { startMusic, toggleMusic, musicMuted } from "./music";
 import { MIKE_SPRITE } from "./game/mikeSprite";
 import { MIKE_TUCK } from "./game/mikeTuck";
 import { drawText, textWidth, GLYPH_H, GLYPH_W } from "./pixelfont";
@@ -248,7 +249,21 @@ canvas.addEventListener("mousemove", (e) => {
   hoveredHotspotId = hs?.id ?? null;
 });
 
+window.addEventListener("keydown", (e) => {
+  if (e.key === "m" || e.key === "M") { startMusic(); toggleMusic(); }
+});
+
+// little note icon, top-right: green = playing, dim = muted
+function drawMusicIcon() {
+  const x = VW - 11, y = 3;
+  ctx.fillStyle = musicMuted() ? "rgba(210,210,210,0.4)" : "#54e08c";
+  ctx.fillRect(x + 4, y, 1, 6);
+  ctx.fillRect(x + 1, y + 5, 4, 3);
+  ctx.fillRect(x + 4, y, 3, 1);
+}
+
 canvas.addEventListener("click", (e) => {
+  startMusic(); // first user gesture kicks off the soundtrack (idempotent)
   const p = toVirtual(e);
 
   // win screen: click to restart
@@ -462,11 +477,9 @@ function render(t: number) {
   drawExitCues(t); // show where you can leave the room
   drawDrone(t);   // the inescapable camera, in every room
 
-  // speech (word-wrapped, stays until click)
-  for (const sp of speechQueue.slice(0, 1)) drawSpeech(sp.text, sp.at.x, sp.at.y);
-
-  // dialogue portrait — the speaker's generated face, with lip-sync
-  if (speechQueue[0]?.face) drawPortrait(speechQueue[0].face, t);
+  // one consistent dialogue panel (portrait + wrapped text) above the verb bar
+  if (speechQueue[0]) drawDialoguePanel(speechQueue[0], t);
+  drawMusicIcon();
 
   // UI strip
   drawUI();
@@ -556,21 +569,42 @@ function centerText(s: string, cx: number, y: number, size: number) {
 // Gemini-painted portrait; falls back to the PixelBench portrait (with lip-sync)
 // if none is baked in.
 const playerFace = makeBackdrop(PLAYER_PORTRAIT_IMG);
-function drawPortrait(face: Backdrop, t: number) {
-  const size = 58;
-  const px = 4;
-  const py = SCENE_H - size - 4;
-  ctx.fillStyle = "#0c0c12";
-  ctx.fillRect(px - 2, py - 2, size + 4, size + 4);
-  ctx.strokeStyle = "#caa54a";
-  ctx.strokeRect(px - 1.5, py - 1.5, size + 3, size + 3);
-  if (!drawBackdrop(ctx, face, px, py, size, size)) {
-    // fallback (player only): the PixelBench portrait with lip-sync
-    ctx.imageSmoothingEnabled = false;
-    const scale = size / 24;
-    const f = Math.sin(t * 16) > 0 ? PLAYER_PORTRAIT.talking : PLAYER_PORTRAIT.neutral;
-    drawSprite(ctx, f, px, py, scale);
+
+// One consistent dialogue panel above the verb bar: speaker portrait on the
+// left, word-wrapped text on the right. Used for ALL speech (player narration
+// and NPC lines), so presentation never varies.
+function drawDialoguePanel(sp: Speech, t: number) {
+  const pad = 5, ps = 42;
+  const hasFace = !!sp.face;
+  const x0 = 3, w = VW - 6;
+  const textX = x0 + pad + (hasFace ? ps + pad : 0);
+  const maxTextW = x0 + w - pad - textX;
+  const maxChars = Math.max(8, Math.floor(maxTextW / (GLYPH_W + 1)));
+  const lines = wrapText(sp.text, maxChars);
+  const lineH = GLYPH_H + 2;
+  const textH = lines.length * lineH;
+  const h = Math.max(hasFace ? ps + pad * 2 : 0, textH + pad * 2);
+  const y0 = SCENE_H - h - 2;
+
+  ctx.fillStyle = "rgba(8,8,14,0.92)";
+  ctx.fillRect(x0, y0, w, h);
+  ctx.strokeStyle = "#caa54a"; ctx.lineWidth = 1;
+  ctx.strokeRect(x0 + 0.5, y0 + 0.5, w - 1, h - 1);
+
+  if (hasFace) {
+    const qx = x0 + pad, qy = y0 + (h - ps) / 2;
+    ctx.fillStyle = "#0c0c12"; ctx.fillRect(qx, qy, ps, ps);
+    const drew = drawBackdrop(ctx, sp.face!, qx, qy, ps, ps);
+    if (!drew && sp.speaker === "player") {
+      ctx.imageSmoothingEnabled = false;
+      const f = Math.sin(t * 16) > 0 ? PLAYER_PORTRAIT.talking : PLAYER_PORTRAIT.neutral;
+      drawSprite(ctx, f, qx, qy, ps / 24);
+    }
+    ctx.strokeStyle = "#caa54a"; ctx.strokeRect(qx + 0.5, qy + 0.5, ps - 1, ps - 1);
   }
+
+  const top = y0 + (h - textH) / 2;
+  for (let i = 0; i < lines.length; i++) drawText(ctx, lines[i], textX, top + i * lineH, "#f3efda", 1);
 }
 
 // Greedy word-wrap to a max character count per line.
@@ -584,26 +618,6 @@ function wrapText(s: string, maxChars: number): string[] {
   }
   if (cur) lines.push(cur);
   return lines;
-}
-
-function drawSpeech(s: string, x: number, y: number) {
-  const margin = 8;
-  const maxChars = Math.floor((VW - margin * 2) / (GLYPH_W + 1));
-  const lines = wrapText(s, maxChars);
-  const lineH = GLYPH_H + 2;
-  const blockW = Math.max(...lines.map((l) => textWidth(l, 1)));
-  const blockH = lines.length * lineH;
-
-  // anchor centered above the speaker, clamped to the scene
-  let bx = clamp(Math.round(x - blockW / 2), 3, VW - blockW - 3);
-  let by = clamp(Math.round(y - blockH), 3, SCENE_H - blockH - 3);
-
-  ctx.fillStyle = "rgba(0,0,0,0.78)";
-  ctx.fillRect(bx - 3, by - 2, blockW + 6, blockH + 3);
-  for (let i = 0; i < lines.length; i++) {
-    const lw = textWidth(lines[i], 1);
-    drawText(ctx, lines[i], Math.round(bx + (blockW - lw) / 2), by + i * lineH, "#ffffff", 1);
-  }
 }
 
 // procedural inventory icons — replace with sprite atlas in production
