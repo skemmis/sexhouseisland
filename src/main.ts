@@ -4,7 +4,7 @@
 import { runGame } from "./runtime";
 import { interact, newGame, ITEMS, ROOMS, START_ROOM, START_POS, initScenes } from "./game";
 import { GAME } from "./game/hooks";
-import { PLAYER_WALK } from "./game/playerWalk";
+import { PLAYER_WALK_TRACED } from "./game/playerWalkTraced";
 import { PLAYER_PORTRAIT } from "./game/playerPortrait";
 import { PLAYER_PORTRAIT_IMG } from "./game/playerPortraitImg";
 
@@ -14,7 +14,8 @@ runGame({
   interact,
   items: ITEMS,
   player: {
-    walk: PLAYER_WALK,
+    walk: PLAYER_WALK_TRACED,
+    cellBase: 1.0, // traced frames are ~46 cells tall; match the old ~48px footprint
     portraitImg: PLAYER_PORTRAIT_IMG,
     portraitPixel: PLAYER_PORTRAIT,
   },

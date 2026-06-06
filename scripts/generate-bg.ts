@@ -82,6 +82,17 @@ const SHEET_POSE_AD =
   "pose-guide image (see instructions below). Same feet baseline in every frame. " +
   "No text, no numbers, no panel borders or grid lines.";
 
+const SILHOUETTE_AD =
+  "Render a WALK-CYCLE pose reference as solid black SILHOUETTES of a single " +
+  "human figure: FOUR frames in a horizontal row, evenly spaced, shown in a " +
+  "consistent 3/4 side view walking to the right. Each frame is a clearly " +
+  "different phase of a natural walk — (1) contact: legs spread front/back, (2) " +
+  "passing: legs together under the body, (3) opposite contact, (4) opposite " +
+  "passing — with the ARMS clearly SWINGING with bent elbows, opposite to the " +
+  "legs. Identical body size in every frame, all feet on the SAME ground " +
+  "baseline. Pure solid black filled silhouettes — no interior detail, no faces, " +
+  "no outline colour — on a flat solid MAGENTA (#FF00FF) background. No text.";
+
 async function genOpenAI(full: string, size: string): Promise<Buffer> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error("OPENAI_API_KEY not set");
@@ -183,6 +194,7 @@ async function main() {
   const title = kind === "title";
   const sprite = kind === "sprite";
   const sheet = kind === "sheet";
+  const silhouette = kind === "silhouette";
   // --ref may repeat; for a pose-conditioned sheet pass the pose guide FIRST,
   // then the character-identity reference.
   const refPaths: string[] = [];
@@ -196,7 +208,7 @@ async function main() {
   const stem = modulePath.split("/").pop()!.replace(/\.ts$/, "");
   if (!prompt) { console.error('Usage: npm run gen:bg -- "<description>" [--kind portrait] [--provider gemini]'); process.exit(1); }
 
-  const ad = portrait ? PORTRAIT_AD : sprite ? SPRITE_AD : posed ? SHEET_POSE_AD : sheet ? SHEET_AD : title ? TITLE_AD : BACKDROP_AD;
+  const ad = silhouette ? SILHOUETTE_AD : portrait ? PORTRAIT_AD : sprite ? SPRITE_AD : posed ? SHEET_POSE_AD : sheet ? SHEET_AD : title ? TITLE_AD : BACKDROP_AD;
   const refNote = posed
     ? "\n\nThe FIRST reference image is a POSE GUIDE: reproduce its layout EXACTLY " +
       "— same number of frames, same left-to-right positions, and the SAME body " +
@@ -207,7 +219,7 @@ async function main() {
       ? "\n\nIMPORTANT: match the character shown in the provided reference image — " +
         "same face, hairstyle, skin tone, build and outfit/colours."
       : "";
-  const full = `${ad}\n\n${portrait || sprite || sheet ? "Character" : "Scene"}: ${prompt}${refNote}`;
+  const full = `${ad}\n\n${portrait || sprite || sheet || silhouette ? "Character" : "Scene"}: ${prompt}${refNote}`;
   console.log(`Generating ${kind} via ${provider}${refs.length ? ` (+${refs.length} ref)` : ""} …`);
   const raw =
     provider === "replicate" ? await genReplicate(full, aspect)
