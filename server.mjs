@@ -30,10 +30,10 @@ async function initStore() {
     ssl: process.env.PGSSL === "disable" ? false : { rejectUnauthorized: false },
   });
   await pool.query("CREATE TABLE IF NOT EXISTS scenes (id text PRIMARY KEY, data jsonb NOT NULL, updated_at timestamptz DEFAULT now())");
-  // Policy: committed rooms.json is the source of truth. On boot, if the code's
-  // rooms.json has changed since the DB was last seeded, sync the DB to it
-  // (overwriting any editor-only edits). If unchanged, keep the DB (so editor
-  // edits persist across redeploys that don't touch the file).
+  // Policy: the EDITOR is the source of truth. We seed the DB once from the
+  // bundled rooms.json; after that we never auto-overwrite, so saved edits hold
+  // across deploys. To deliberately push committed rooms.json changes (replacing
+  // editor edits), deploy once with RESEED=1.
   const bundledStr = await readFile(ROOMS_FILE, "utf8");
   const bundled = JSON.parse(bundledStr);
   const hash = createHash("sha1").update(bundledStr).digest("hex");
@@ -44,12 +44,14 @@ async function initStore() {
     await pool.query("INSERT INTO scenes (id, data) VALUES ('rooms', $1)", [bundled]);
     await setMeta(hash);
     console.log("scenes: Postgres — seeded from rooms.json");
-  } else if (seedHash !== hash) {
+  } else if (process.env.RESEED) {
     await pool.query("UPDATE scenes SET data = $1, updated_at = now() WHERE id='rooms'", [bundled]);
     await setMeta(hash);
-    console.log("scenes: Postgres — rooms.json changed in code; synced DB to bundled (editor-only edits overwritten)");
+    console.log("scenes: Postgres — RESEED: overwrote DB from committed rooms.json (editor edits replaced)");
+  } else if (seedHash !== hash) {
+    console.log("scenes: Postgres — editor is source of truth. NOTE: committed rooms.json differs from the live DB; deploy once with RESEED=1 to apply it (overwrites editor edits).");
   } else {
-    console.log("scenes: Postgres (in sync with committed rooms.json)");
+    console.log("scenes: Postgres — editor is source of truth");
   }
 }
 async function readRooms() {
