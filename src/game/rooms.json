@@ -179,6 +179,26 @@
             "face": 1
           }
         }
+      ],
+      "props": [
+        {
+          "id": "pelican",
+          "sprite": "pelican",
+          "x": 48,
+          "y": 102,
+          "scale": 1.8
+        },
+        {
+          "id": "towel",
+          "sprite": "towel",
+          "x": 289,
+          "y": 62,
+          "scale": 1.8,
+          "visibleWhen": {
+            "flag": "gotTowel",
+            "is": false
+          }
+        }
       ]
     },
     "beach": {
@@ -266,6 +286,15 @@
             "face": 1
           }
         }
+      ],
+      "props": [
+        {
+          "id": "bonny",
+          "sprite": "bonny",
+          "x": 152,
+          "y": 80,
+          "scale": 1.9
+        }
       ]
     },
     "control": {
@@ -344,6 +373,15 @@
             },
             "face": 0
           }
+        }
+      ],
+      "props": [
+        {
+          "id": "mackenzie",
+          "sprite": "mack",
+          "x": 214,
+          "y": 80,
+          "scale": 1.9
         }
       ]
     },

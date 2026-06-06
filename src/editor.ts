@@ -6,10 +6,11 @@
 // ============================================================================
 import roomsJson from "./game/rooms.json";
 import { BACKDROPS } from "./game/assets";
+import { SPRITES } from "./game/spriteRegistry";
 import { drawSprite } from "./pixels/render";
 import { PLAYER_WALK } from "./game/playerWalk";
 import { CELL, GW, GH, decodeMask, encodeMask, type WalkMask } from "./walk";
-import type { Hotspot, RoomsFile } from "./types";
+import type { Hotspot, Prop, RoomsFile } from "./types";
 
 const SX = 320, SY = 136, S = 3;
 const canvas = document.getElementById("ed") as HTMLCanvasElement;
@@ -26,8 +27,9 @@ let mouse = { x: 0, y: 0, in: false };
 const masks: Record<string, WalkMask> = {};
 const images: Record<string, HTMLImageElement> = {};
 
-type Sel = { kind: "hotspot" | "walkTo" | "floorMin" | "floorMax"; i?: number } | null;
+type Sel = { kind: "hotspot" | "walkTo" | "floorMin" | "floorMax" | "prop"; i?: number } | null;
 let sel: Sel = null;
+let layer: "hotspots" | "props" = "hotspots"; // which set the Select tool edits
 type Drag = { mode: "move" | "resize" | "walkTo" | "floor" | "paint" | "vertex"; handle?: string; vi?: number; ox: number; oy: number; orig?: any } | null;
 let drag: Drag = null;
 
@@ -62,6 +64,9 @@ function buildBar() {
   };
   const rooms = group();
   for (const id of Object.keys(file.rooms)) btn(id, id === roomId, () => { roomId = id; sel = null; buildBar(); }, rooms);
+  const lay = group();
+  btn("Hotspots", layer === "hotspots", () => { layer = "hotspots"; sel = null; buildBar(); }, lay);
+  btn("Sprites", layer === "props", () => { layer = "props"; sel = null; buildBar(); }, lay);
   const tools = group();
   btn("Select", tool === "select", () => { tool = "select"; buildBar(); }, tools);
   btn("Paint walk", tool === "paint", () => { tool = "paint"; buildBar(); }, tools);
@@ -136,6 +141,8 @@ function inPolyE(p: { x: number; y: number }, poly: { x: number; y: number }[]) 
   return inside;
 }
 const hitH = (p: { x: number; y: number }, h: Hotspot) => (h.poly && h.poly.length >= 3 ? inPolyE(p, h.poly) : inRect(p, h));
+const propBox = (pr: Prop) => { const s = SPRITES[pr.sprite]; const w = (s?.w ?? 8) * pr.scale, h = (s?.h ?? 8) * pr.scale; return { x: pr.x, y: pr.y, w, h }; };
+const inProp = (p: { x: number; y: number }, pr: Prop) => { const b = propBox(pr); return p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h; };
 function vertexAt(p: { x: number; y: number }, h: Hotspot) {
   if (!h.poly) return -1;
   for (let i = 0; i < h.poly.length; i++) if (near(p.x, h.poly[i].x, 3) && near(p.y, h.poly[i].y, 3)) return i;
@@ -203,8 +210,14 @@ canvas.addEventListener("pointerdown", (e) => {
   const p = toScene(e);
   if (tool === "paint" || tool === "erase") { drag = { mode: "paint", ox: 0, oy: 0 }; paintAt(p, tool === "paint"); return; }
   if (tool === "addpt") { addPoint(p); return; }
-  // select tool
   const r = room();
+  // SPRITES layer: select/move props
+  if (layer === "props") {
+    const props = r.props ?? [];
+    for (let i = props.length - 1; i >= 0; i--) if (inProp(p, props[i])) { sel = { kind: "prop", i }; drag = { mode: "move", ox: p.x - props[i].x, oy: p.y - props[i].y }; return; }
+    sel = null; return;
+  }
+  // HOTSPOTS layer (select tool)
   if (sel?.kind === "hotspot" && sel.i != null) {
     const h = r.hotspots[sel.i];
     const vi = vertexAt(p, h); // drag a polygon vertex
@@ -226,11 +239,18 @@ canvas.addEventListener("pointermove", (e) => {
   const r = room();
   const rx = Math.round(p.x), ry = Math.round(p.y);
   if (drag.mode === "paint") { paintAt(p, tool === "paint"); return; }
+  if (sel?.kind === "prop" && sel.i != null && r.props) {
+    const pr = r.props[sel.i];
+    pr.x = clampI(rx - Math.round(drag.ox), 0, SX); pr.y = clampI(ry - Math.round(drag.oy), 0, SY);
+    setDirty(); return;
+  }
   if (sel?.kind === "hotspot" && sel.i != null) {
     const h = r.hotspots[sel.i];
     if (drag.mode === "move") {
       const nx = clampI(rx - Math.round(drag.ox), 0, SX - h.rect.w), ny = clampI(ry - Math.round(drag.oy), 0, SY - h.rect.h);
-      if (h.poly) { const dx = nx - h.rect.x, dy = ny - h.rect.y; h.poly.forEach((v) => { v.x += dx; v.y += dy; }); }
+      const dx = nx - h.rect.x, dy = ny - h.rect.y;
+      if (h.poly) h.poly.forEach((v) => { v.x += dx; v.y += dy; });
+      h.walkTo.x = clampI(h.walkTo.x + dx, 0, SX); h.walkTo.y = clampI(h.walkTo.y + dy, 0, SY); // walk-to moves with the hotspot
       h.rect.x = nx; h.rect.y = ny; setDirty();
     }
     else if (drag.mode === "vertex" && h.poly && drag.vi != null) { h.poly[drag.vi] = { x: clampI(rx, 0, SX), y: clampI(ry, 0, SY) }; recomputeRect(h); setDirty(); }
@@ -248,11 +268,17 @@ canvas.addEventListener("pointerup", () => { drag = null; });
 canvas.addEventListener("pointerleave", () => { mouse.in = false; });
 
 window.addEventListener("keydown", (e) => {
-  if (sel?.kind !== "hotspot" || sel.i == null) return;
-  const h = room().hotspots[sel.i];
   const d = e.shiftKey ? 10 : 1;
-  if (e.key === "ArrowLeft") h.rect.x -= d; else if (e.key === "ArrowRight") h.rect.x += d;
-  else if (e.key === "ArrowUp") h.rect.y -= d; else if (e.key === "ArrowDown") h.rect.y += d; else return;
+  const dx = e.key === "ArrowLeft" ? -d : e.key === "ArrowRight" ? d : 0;
+  const dy = e.key === "ArrowUp" ? -d : e.key === "ArrowDown" ? d : 0;
+  if (!dx && !dy) return;
+  if (sel?.kind === "hotspot" && sel.i != null) {
+    const h = room().hotspots[sel.i];
+    h.rect.x += dx; h.rect.y += dy; h.walkTo.x += dx; h.walkTo.y += dy;
+    if (h.poly) h.poly.forEach((v) => { v.x += dx; v.y += dy; });
+  } else if (sel?.kind === "prop" && sel.i != null && room().props) {
+    const p = room().props![sel.i]; p.x += dx; p.y += dy;
+  } else return;
   e.preventDefault(); setDirty();
 });
 
@@ -304,6 +330,19 @@ function frame() {
     ctx.globalAlpha = 1;
   }
 
+  // props (placed sprites) — draw the actual sprite + an outline so you can see
+  // and align them; selectable/movable in the Sprites layer.
+  (r.props ?? []).forEach((pr, i) => {
+    const sp = SPRITES[pr.sprite];
+    if (sp) drawSprite(ctx, sp, Math.round(pr.x * S), Math.round(pr.y * S), pr.scale * S);
+    const b = propBox(pr);
+    const selp = layer === "props" && sel?.kind === "prop" && sel.i === i;
+    ctx.lineWidth = selp ? 2 : 1;
+    ctx.strokeStyle = selp ? "#ff8af0" : layer === "props" ? "rgba(255,140,240,0.55)" : "rgba(255,140,240,0.2)";
+    ctx.strokeRect(b.x * S + 0.5, b.y * S + 0.5, b.w * S - 1, b.h * S - 1);
+    if (layer === "props") label2(pr.id, b.x * S + 1, b.y * S - 2, "#ffb0ee");
+  });
+
   // hotspots
   r.hotspots.forEach((h, i) => {
     const selected = sel?.kind === "hotspot" && sel.i === i;
@@ -337,8 +376,10 @@ function frame() {
   // HUD
   const selTxt = sel?.kind === "hotspot" && sel.i != null
     ? (() => { const h = room().hotspots[sel.i!]; return `${h.id}  rect ${h.rect.x},${h.rect.y} ${h.rect.w}×${h.rect.h}  walkTo ${h.walkTo.x},${h.walkTo.y}`; })()
+    : sel?.kind === "prop" && sel.i != null
+    ? (() => { const p = room().props![sel.i!]; return `${p.id} (${p.sprite})  ${p.x},${p.y}  ×${p.scale}`; })()
     : sel?.kind ? sel.kind : "—";
-  label2(`room ${roomId}  ·  ${tool}  ·  x${Math.round(mouse.x)} y${Math.round(mouse.y)}`, 4, SY * S - 16, "#cfe6ff");
+  label2(`room ${roomId}  ·  ${layer}/${tool}  ·  x${Math.round(mouse.x)} y${Math.round(mouse.y)}`, 4, SY * S - 16, "#cfe6ff");
   label2(`sel: ${selTxt}`, 4, SY * S - 4, "#ffe7b0");
   requestAnimationFrame(frame);
 }

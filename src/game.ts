@@ -1,19 +1,14 @@
 import type { ActionResult, Dialogue, GameState, Item, Room, RoomData, RoomsFile, Verb } from "./types";
-import { flatFill } from "./pixels/sprite";
 import { drawSprite } from "./pixels/render";
-import { TEMPLATES } from "./pixels/templates";
 import { makeBackdrop, drawBackdrop, type Backdrop } from "./background";
 import { BACKDROPS } from "./game/assets";
+import { SPRITES } from "./game/spriteRegistry";
 import roomsData from "./game/rooms.json";
 import { MIKE_SPRITE } from "./game/mikeSprite";
 import { MIKE_PORTRAIT_IMG } from "./game/mikePortraitImg";
-import { BONNY_SPRITE } from "./game/bonnySprite";
 import { BONNY_PORTRAIT_IMG } from "./game/bonnyPortraitImg";
-import { MACK_SPRITE } from "./game/mackSprite";
 import { MACK_PORTRAIT_IMG } from "./game/mackPortraitImg";
 
-// A baked (no-API) pelican for set dressing, from the silhouette-template library.
-const PELICAN_SPRITE = flatFill(TEMPLATES.pelican.template, TEMPLATES.pelican.defaultChoice);
 
 // ============================================================================
 //  GAME CONTENT  — this is the "authoring" layer. Everything here is data +
@@ -45,25 +40,36 @@ const bgFor = (key: string) => (BG_CACHE[key] ??= makeBackdrop(BACKDROPS[key]));
 // Per-room dynamic drawing (state-dependent sprites/effects), keyed by room id.
 const OVERLAYS: Record<string, (ctx: CanvasRenderingContext2D, t: number, state: GameState) => void> = {
   dock: paintDockOverlays,
-  beach: paintBeachOverlays,
   control: paintControlOverlays,
   confessional: paintConfessionalOverlays,
   galley: paintGalleyOverlays,
   jetty: paintJettyOverlays,
 };
 
+// Draw a room's placed sprites (props) from data, respecting visibility flags.
+function drawProps(ctx: CanvasRenderingContext2D, props: RoomData["props"], state: GameState) {
+  if (!props) return;
+  for (const p of props) {
+    if (p.visibleWhen && !!state.flags[p.visibleWhen.flag] !== p.visibleWhen.is) continue;
+    const sp = SPRITES[p.sprite];
+    if (sp) drawSprite(ctx, sp, p.x, p.y, p.scale);
+  }
+}
+
 function buildRoom(id: string, d: RoomData): Room {
   return {
     id,
     floor: d.floor,
     hotspots: d.hotspots,
+    props: d.props,
     walk: d.walk,
     paint: (ctx, t, state) => {
       if (!drawBackdrop(ctx, bgFor(d.backdrop), 0, 0, 320, 136)) {
         ctx.fillStyle = "#0f151c";
         ctx.fillRect(0, 0, 320, 136);
       }
-      OVERLAYS[id]?.(ctx, t, state);
+      drawProps(ctx, d.props, state); // editor-placed sprites
+      OVERLAYS[id]?.(ctx, t, state); // procedural effects + dynamic Mike
     },
   };
 }
@@ -410,17 +416,10 @@ function itemName(id: string) {
 //  objects ride above it). Keyed by room id in OVERLAYS above. Positions here
 //  are still code for now — placing these visually is a later editor iteration.
 // ============================================================================
-function paintBeachOverlays(ctx: CanvasRenderingContext2D, t: number, state: GameState) {
-  // Bonny, shivering by the shore (a tiny shiver wobble until she's warm)
-  const shiver = state.flags.bonnyWarm ? 0 : Math.round(Math.sin(t * 22) * 0.7);
-  drawSprite(ctx, BONNY_SPRITE, 152 + shiver, 80, 1.9);
-}
-
 function paintControlOverlays(ctx: CanvasRenderingContext2D, t: number, _state: GameState) {
-  // a faint blue screen-flicker across the monitor wall
+  // a faint blue screen-flicker across the monitor wall (Mackenzie is a prop now)
   ctx.fillStyle = `rgba(120,170,210,${0.04 + 0.035 * Math.sin(t * 6)})`;
   ctx.fillRect(36, 26, 248, 46);
-  drawSprite(ctx, MACK_SPRITE, 214, 80, 1.9); // Mackenzie, lurking by the racks
 }
 
 function paintConfessionalOverlays(ctx: CanvasRenderingContext2D, t: number, _state: GameState) {
@@ -495,10 +494,11 @@ function mackDialogue(): Dialogue {
 // State-dependent objects, drawn over the painted backdrop. Positioned to match
 // the painted layout (pelican on the front deck, skimmer at the pool's left).
 function paintDockOverlays(ctx: CanvasRenderingContext2D, _t: number, state: GameState) {
-  drawSprite(ctx, PELICAN_SPRITE, 48, 102, 1.8); // on the front deck, foreground
+  // (pelican + towel are props now; placed in the editor.)
 
   // Mike White, lounging by the pool — hidden once he's gone, or while the
-  // dive cutscene is animating him (the engine draws the diving Mike then).
+  // dive cutscene is animating him (the engine draws the diving Mike then). Stays
+  // in code because his position is driven by the cutscene, not static.
   if (!state.flags.mikeGone && !state.flags.mikeJumping) drawSprite(ctx, MIKE_SPRITE, 265, 80, 1.7);
 
   if (!state.flags.gotRod) {
@@ -515,11 +515,5 @@ function paintDockOverlays(ctx: CanvasRenderingContext2D, _t: number, state: Gam
   if (state.flags.doorOpen) {
     ctx.fillStyle = "rgba(255,210,120,0.45)";
     ctx.fillRect(8, 48, 26, 44); // warm light spilling from the open villa door
-  }
-  if (!state.flags.gotTowel) {
-    // a folded beach towel draped on the right-hand lounger (the pickup item)
-    ctx.fillStyle = "#3f7d80"; ctx.fillRect(289, 64, 22, 7);
-    ctx.fillStyle = "#c0556f"; ctx.fillRect(289, 67, 22, 2);
-    ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.fillRect(289, 64, 22, 1);
   }
 }

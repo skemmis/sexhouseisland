@@ -70,10 +70,24 @@ export interface Room {
   /** Floor band for walking + depth scaling. minY = far edge, maxY = near edge. */
   floor: { minY: number; maxY: number; minScale: number; maxScale: number };
   hotspots: Hotspot[];
+  /** Placed sprites (set dressing / items). */
+  props?: Prop[];
   /** Base64 walkable-area mask (see src/walk.ts); absent = free movement. */
   walk?: string;
   /** Draws the painted backdrop. Replace with a loaded image in production. */
   paint: (ctx: CanvasRenderingContext2D, t: number, state: GameState) => void;
+}
+
+/** A placed sprite (set dressing / item) drawn over the backdrop. Top-left at
+ *  (x,y); `scale` = on-screen pixels per sprite cell. `sprite` is a key into the
+ *  sprite registry (src/game/spriteRegistry.ts). Editor-placeable. */
+export interface Prop {
+  id: string;
+  sprite: string;
+  x: number;
+  y: number;
+  scale: number;
+  visibleWhen?: { flag: string; is: boolean };
 }
 
 /** Pure scene geometry — the editor-owned data that lives in rooms.json. */
@@ -82,6 +96,8 @@ export interface RoomData {
   backdrop: string;
   floor: { minY: number; maxY: number; minScale: number; maxScale: number };
   hotspots: Hotspot[];
+  /** Placed sprites (set dressing / items). Drawn before per-room overlays. */
+  props?: Prop[];
   /** Base64 walkable-area mask (see src/walk.ts); absent = free movement. */
   walk?: string;
 }
