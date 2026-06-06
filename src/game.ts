@@ -4,7 +4,7 @@ import { makeBackdrop, drawBackdrop, type Backdrop } from "./background";
 import { BACKDROPS } from "./game/assets";
 import { SPRITES, baseScale } from "./game/spriteRegistry";
 import roomsData from "./game/rooms.json";
-import { MIKE_SPRITE } from "./game/mikeSprite";
+import { MIKE_SPRITE } from "./game/mikeTraced";
 import { MIKE_PORTRAIT_IMG } from "./game/mikePortraitImg";
 import { BONNY_PORTRAIT_IMG } from "./game/bonnyPortraitImg";
 import { MACK_PORTRAIT_IMG } from "./game/mackPortraitImg";
@@ -499,7 +499,12 @@ function paintDockOverlays(ctx: CanvasRenderingContext2D, _t: number, state: Gam
   // Mike White, lounging by the pool — hidden once he's gone, or while the
   // dive cutscene is animating him (the engine draws the diving Mike then). Stays
   // in code because his position is driven by the cutscene, not static.
-  if (!state.flags.mikeGone && !state.flags.mikeJumping) drawSprite(ctx, MIKE_SPRITE, 265, 80, 1.7);
+  if (!state.flags.mikeGone && !state.flags.mikeJumping) {
+    // drawn centered on the dive's start point (278,100) so there's no jump when
+    // the cannonball cutscene takes over.
+    const ms = 1.7 * baseScale("mike");
+    drawSprite(ctx, MIKE_SPRITE, 278 - (MIKE_SPRITE.w * ms) / 2, 100 - (MIKE_SPRITE.h * ms) / 2, ms);
+  }
 
   if (!state.flags.gotRod) {
     ctx.strokeStyle = "#9aa3ad";

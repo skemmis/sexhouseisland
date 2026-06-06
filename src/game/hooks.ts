@@ -2,12 +2,17 @@
 // the EngineApi so this logic lives in the GAME, not the engine. See
 // docs/SLOPP-ENGINE.md. (Mike's dive cutscene + the broadcast ending.)
 import { Cutscene, arc } from "../cutscene";
-import { MIKE_SPRITE } from "./mikeSprite";
-import { MIKE_TUCK } from "./mikeTuck";
+import { MIKE_SPRITE } from "./mikeTraced";
+import { MIKE_TUCK } from "./mikeTuckTraced";
+import { baseScale } from "./spriteRegistry";
 import { makeBackdrop, drawBackdrop } from "../background";
 import { TITLE_BG } from "./titleBg";
 import type { EngineApi, GameHooks } from "../engineApi";
 import type { PixelSprite } from "../pixels/sprite";
+
+// Mike's traced sprites are ~44 cells tall vs the old 16x24; scale the dive to
+// match (same factor the registry uses for his standing prop).
+const MS = baseScale("mike");
 
 const titleBackdrop = makeBackdrop(TITLE_BG); // painted title art (empty until generated)
 
@@ -46,9 +51,9 @@ function makeMikeDive(api: EngineApi): Cutscene {
   const start = { x: 278, y: 100 }, water = { x: 165, y: 98 };
   return new Cutscene([
     { d: 0.35, on() { mikeAnim.active = true; mikeAnim.pose = "stand"; mikeAnim.splash = 0; mikeAnim.rot = 0; },
-      tween(k) { mikeAnim.cx = start.x; mikeAnim.cy = start.y + 5 * k; mikeAnim.scale = 1.7; mikeAnim.sx = 1 + 0.25 * k; mikeAnim.sy = 1 - 0.3 * k; } },
+      tween(k) { mikeAnim.cx = start.x; mikeAnim.cy = start.y + 5 * k; mikeAnim.scale = 1.7 * MS; mikeAnim.sx = 1 + 0.25 * k; mikeAnim.sy = 1 - 0.3 * k; } },
     { d: 0.85, on() { mikeAnim.pose = "tuck"; mikeAnim.sx = 1; mikeAnim.sy = 1; },
-      tween(k) { const p = arc(start, water, 48, k); mikeAnim.cx = p.x; mikeAnim.cy = p.y; mikeAnim.scale = 1.7 - 0.95 * k; mikeAnim.rot = -k * Math.PI * 2.4; } },
+      tween(k) { const p = arc(start, water, 48, k); mikeAnim.cx = p.x; mikeAnim.cy = p.y; mikeAnim.scale = (1.7 - 0.95 * k) * MS; mikeAnim.rot = -k * Math.PI * 2.4; } },
     { d: 0.9, on() { api.state.flags.mikeGone = true; mikeAnim.pose = "hidden"; }, tween(k) { mikeAnim.splash = k; } },
     { d: 0.6, on() { mikeAnim.active = false; mikeAnim.splash = 0; } },
     { d: 0.01, on() { api.say(["...He's not coming back up."]); } },
