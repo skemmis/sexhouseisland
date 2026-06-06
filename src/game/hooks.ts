@@ -4,8 +4,12 @@
 import { Cutscene, arc } from "../cutscene";
 import { MIKE_SPRITE } from "./mikeSprite";
 import { MIKE_TUCK } from "./mikeTuck";
+import { makeBackdrop, drawBackdrop } from "../background";
+import { TITLE_BG } from "./titleBg";
 import type { EngineApi, GameHooks } from "../engineApi";
 import type { PixelSprite } from "../pixels/sprite";
+
+const titleBackdrop = makeBackdrop(TITLE_BG); // painted title art (empty until generated)
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
@@ -82,8 +86,15 @@ function drawMike(api: EngineApi) {
 // Title screen: sunset over the villa's lagoon, a surveillance drone drifting by.
 function drawTitle(api: EngineApi) {
   const ctx = api.ctx, W = api.VW, H = api.VH, t = api.t;
-  // sunset sky
-  const sky = ctx.createLinearGradient(0, 0, 0, 112);
+  // Painted establishing shot (generate via gen:bg into titleBg.ts) if present;
+  // otherwise the procedural dusk fallback below.
+  if (drawBackdrop(ctx, titleBackdrop, 0, 0, W, H)) {
+    const scrim = ctx.createLinearGradient(0, 0, 0, 96); // keep the logo legible
+    scrim.addColorStop(0, "rgba(8,5,18,0.6)"); scrim.addColorStop(1, "rgba(8,5,18,0)");
+    ctx.fillStyle = scrim; ctx.fillRect(0, 0, W, 96);
+  } else {
+    // sunset sky
+    const sky = ctx.createLinearGradient(0, 0, 0, 112);
   sky.addColorStop(0, "#241445"); sky.addColorStop(0.45, "#6b2f63");
   sky.addColorStop(0.75, "#d8624e"); sky.addColorStop(1, "#f0a85e");
   ctx.fillStyle = sky; ctx.fillRect(0, 0, W, 112);
@@ -115,7 +126,8 @@ function drawTitle(api: EngineApi) {
   ctx.beginPath(); ctx.moveTo(dx - 8, dy - 2); ctx.lineTo(dx + 8, dy - 2); ctx.stroke();
   ctx.fillStyle = "#1c2026"; ctx.fillRect(dx - 4, dy - 1, 8, 4);
   if (Math.sin(t * 6) > 0) { ctx.fillStyle = "#ff3b30"; ctx.fillRect(dx + 3, dy, 1, 1); }
-  // logo: drop shadow + cream fill
+  }
+  // logo: drop shadow + cream fill (drawn over either backdrop)
   ctx.fillStyle = "#1a0a22";
   api.centerText("SEX HOUSE", W / 2 + 1, 46, 11); api.centerText("ISLAND", W / 2 + 1, 68, 11);
   ctx.fillStyle = "#fff0c8";
