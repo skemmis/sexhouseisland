@@ -160,7 +160,7 @@ export function interact(
         };
       }
       if (state.flags.doorOpen && (verb === "Open" || verb === "Use" || verb === "Push" || walkTo))
-        return { say: ["I step through — and it isn't a villa at all."], goto: { room: "control", entry: { x: 26, y: 122 }, face: 1 } };
+        return { say: ["I step through — and it isn't a villa at all."], goto: { room: "control", entry: { x: 20, y: 126 }, face: 1 } };
       if ((verb === "Open" || verb === "Use" || walkTo) && !state.flags.doorOpen)
         return { say: ["Locked. We're not allowed inside — that's the whole bit. I'll need a key."] };
       if (verb === "Look at") return { say: state.flags.doorOpen
