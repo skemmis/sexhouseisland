@@ -39,6 +39,15 @@ const TITLE_AD =
   "interface — paint ONLY the scene and the title logo. No other text besides " +
   "the logo, no watermark, no people or characters.";
 
+const SPRITE_AD =
+  `${ART_DIRECTION}\n\n` +
+  "Render ONE 16-bit pixel-art CHARACTER SPRITE for an adventure game: a single " +
+  "full-body character, standing straight and relaxed, facing the viewer, " +
+  "centered and filling almost the full height of the frame, thick near-black " +
+  "outline, bold readable shapes, simple cel shading from a warm key light. " +
+  "Solid FLAT MAGENTA (#FF00FF) background ONLY — no scenery, no ground line, no " +
+  "cast shadow, no text. The whole figure must be inside the frame.";
+
 async function genOpenAI(full: string, size: string): Promise<Buffer> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error("OPENAI_API_KEY not set");
@@ -135,6 +144,7 @@ async function main() {
   const kind = (arg("--kind", "backdrop") ?? "backdrop").toLowerCase();
   const portrait = kind === "portrait";
   const title = kind === "title";
+  const sprite = kind === "sprite";
   const w = +(arg("--w", portrait ? "64" : "320")!), h = +(arg("--h", portrait ? "64" : "136")!);
   const aspect = arg("--aspect", process.env.GEMINI_ASPECT) ?? (portrait ? "1:1" : "21:9");
   const modulePath = arg("--module", "src/game/poolDeckBg.ts")!;
@@ -142,8 +152,8 @@ async function main() {
   const stem = modulePath.split("/").pop()!.replace(/\.ts$/, "");
   if (!prompt) { console.error('Usage: npm run gen:bg -- "<description>" [--kind portrait] [--provider gemini]'); process.exit(1); }
 
-  const ad = portrait ? PORTRAIT_AD : title ? TITLE_AD : BACKDROP_AD;
-  const full = `${ad}\n\n${portrait ? "Character" : "Scene"}: ${prompt}`;
+  const ad = portrait ? PORTRAIT_AD : sprite ? SPRITE_AD : title ? TITLE_AD : BACKDROP_AD;
+  const full = `${ad}\n\n${portrait || sprite ? "Character" : "Scene"}: ${prompt}`;
   console.log(`Generating ${kind} via ${provider} …`);
   const raw =
     provider === "replicate" ? await genReplicate(full, aspect)
