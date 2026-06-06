@@ -33,6 +33,11 @@ export interface Hotspot {
   face?: number;
   /** If set, walking here travels to another room (entering at `entry`). */
   exit?: { to: string; entry: Vec; face?: number };
+  /** Dynamic visibility: the hotspot exists only when state.flags[flag] === is. */
+  visibleWhen?: { flag: string; is: boolean };
+  /** Optional freeform polygon (scene px). When present, hit-testing uses this
+   *  instead of the rect; the rect still bounds it (for the editor + culling). */
+  poly?: Vec[];
 }
 
 /** An inventory item. `icon` is drawn procedurally for now (see render.ts). */

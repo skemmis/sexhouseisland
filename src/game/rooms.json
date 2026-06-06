@@ -59,7 +59,11 @@
             "x": 100,
             "y": 124
           },
-          "face": 0
+          "face": 0,
+          "visibleWhen": {
+            "flag": "gotRod",
+            "is": false
+          }
         },
         {
           "id": "parrot",
@@ -104,7 +108,11 @@
             "x": 250,
             "y": 126
           },
-          "face": 1
+          "face": 1,
+          "visibleWhen": {
+            "flag": "mikeGone",
+            "is": false
+          }
         },
         {
           "id": "towel",
@@ -119,7 +127,11 @@
             "x": 290,
             "y": 126
           },
-          "face": 1
+          "face": 1,
+          "visibleWhen": {
+            "flag": "gotTowel",
+            "is": false
+          }
         },
         {
           "id": "archway",
@@ -142,6 +154,29 @@
               "y": 122
             },
             "face": -1
+          }
+        },
+        {
+          "id": "confbooth",
+          "name": "the confessional booth",
+          "rect": {
+            "x": 0,
+            "y": 100,
+            "w": 18,
+            "h": 34
+          },
+          "walkTo": {
+            "x": 16,
+            "y": 126
+          },
+          "face": -1,
+          "exit": {
+            "to": "confessional",
+            "entry": {
+              "x": 50,
+              "y": 114
+            },
+            "face": 1
           }
         }
       ]
@@ -204,6 +239,29 @@
             "entry": {
               "x": 18,
               "y": 126
+            },
+            "face": 1
+          }
+        },
+        {
+          "id": "tojetty",
+          "name": "down to the jetty",
+          "rect": {
+            "x": 300,
+            "y": 96,
+            "w": 20,
+            "h": 40
+          },
+          "walkTo": {
+            "x": 306,
+            "y": 128
+          },
+          "face": 1,
+          "exit": {
+            "to": "jetty",
+            "entry": {
+              "x": 26,
+              "y": 128
             },
             "face": 1
           }
@@ -286,6 +344,244 @@
             },
             "face": 0
           }
+        }
+      ]
+    },
+    "confessional": {
+      "backdrop": "confessional",
+      "floor": {
+        "minY": 100,
+        "maxY": 120,
+        "minScale": 0.7,
+        "maxScale": 1
+      },
+      "hotspots": [
+        {
+          "id": "confcurtain",
+          "name": "the curtain out",
+          "rect": {
+            "x": 0,
+            "y": 18,
+            "w": 40,
+            "h": 104
+          },
+          "walkTo": {
+            "x": 48,
+            "y": 114
+          },
+          "face": -1,
+          "exit": {
+            "to": "dock",
+            "entry": {
+              "x": 20,
+              "y": 126
+            },
+            "face": 1
+          }
+        },
+        {
+          "id": "camera",
+          "name": "the confession camera",
+          "rect": {
+            "x": 186,
+            "y": 42,
+            "w": 48,
+            "h": 62
+          },
+          "walkTo": {
+            "x": 202,
+            "y": 114
+          },
+          "face": 1
+        },
+        {
+          "id": "stool",
+          "name": "the confession stool",
+          "rect": {
+            "x": 128,
+            "y": 60,
+            "w": 48,
+            "h": 54
+          },
+          "walkTo": {
+            "x": 150,
+            "y": 116
+          },
+          "face": 0
+        }
+      ]
+    },
+    "galley": {
+      "backdrop": "galley",
+      "floor": {
+        "minY": 104,
+        "maxY": 120,
+        "minScale": 0.72,
+        "maxScale": 1.02
+      },
+      "hotspots": [
+        {
+          "id": "galleydoor",
+          "name": "the galley door",
+          "rect": {
+            "x": 0,
+            "y": 30,
+            "w": 46,
+            "h": 90
+          },
+          "walkTo": {
+            "x": 50,
+            "y": 116
+          },
+          "face": -1,
+          "exit": {
+            "to": "jetty",
+            "entry": {
+              "x": 240,
+              "y": 126
+            },
+            "face": 0
+          }
+        },
+        {
+          "id": "freezer",
+          "name": "the chest freezer",
+          "rect": {
+            "x": 120,
+            "y": 52,
+            "w": 86,
+            "h": 60
+          },
+          "walkTo": {
+            "x": 160,
+            "y": 118
+          },
+          "face": 0,
+          "visibleWhen": {
+            "flag": "gotFish",
+            "is": false
+          }
+        },
+        {
+          "id": "emptyfreezer",
+          "name": "the chest freezer",
+          "rect": {
+            "x": 120,
+            "y": 52,
+            "w": 86,
+            "h": 60
+          },
+          "walkTo": {
+            "x": 160,
+            "y": 118
+          },
+          "face": 0,
+          "visibleWhen": {
+            "flag": "gotFish",
+            "is": true
+          }
+        },
+        {
+          "id": "snacksign",
+          "name": "the SEXY SNACKS sign",
+          "rect": {
+            "x": 238,
+            "y": 18,
+            "w": 74,
+            "h": 26
+          },
+          "walkTo": {
+            "x": 250,
+            "y": 118
+          },
+          "face": 1
+        }
+      ]
+    },
+    "jetty": {
+      "backdrop": "jetty",
+      "floor": {
+        "minY": 108,
+        "maxY": 132,
+        "minScale": 0.78,
+        "maxScale": 1.15
+      },
+      "hotspots": [
+        {
+          "id": "beachback",
+          "name": "back to the beach",
+          "rect": {
+            "x": 0,
+            "y": 60,
+            "w": 34,
+            "h": 76
+          },
+          "walkTo": {
+            "x": 24,
+            "y": 128
+          },
+          "face": -1,
+          "exit": {
+            "to": "beach",
+            "entry": {
+              "x": 300,
+              "y": 128
+            },
+            "face": -1
+          }
+        },
+        {
+          "id": "boat",
+          "name": "the supply boat",
+          "rect": {
+            "x": 226,
+            "y": 54,
+            "w": 84,
+            "h": 64
+          },
+          "walkTo": {
+            "x": 250,
+            "y": 128
+          },
+          "face": 1,
+          "exit": {
+            "to": "galley",
+            "entry": {
+              "x": 50,
+              "y": 116
+            },
+            "face": 1
+          }
+        },
+        {
+          "id": "trawler",
+          "name": "the boat on the horizon",
+          "rect": {
+            "x": 60,
+            "y": 36,
+            "w": 62,
+            "h": 22
+          },
+          "walkTo": {
+            "x": 120,
+            "y": 128
+          },
+          "face": 0
+        },
+        {
+          "id": "water",
+          "name": "the red-tide water",
+          "rect": {
+            "x": 40,
+            "y": 64,
+            "w": 260,
+            "h": 16
+          },
+          "walkTo": {
+            "x": 160,
+            "y": 128
+          },
+          "face": 0
         }
       ]
     }

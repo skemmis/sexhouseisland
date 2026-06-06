@@ -97,6 +97,24 @@ function inventoryItemAt(x: number, y: number): Item | null {
 // the drone's current on-screen rect, updated each frame by drawDrone
 let droneRect = { x: -99, y: -99, w: 0, h: 0 };
 
+// A hotspot is live only when its (optional) visibility condition is met.
+function hsVisible(h: { visibleWhen?: { flag: string; is: boolean } }) {
+  return !h.visibleWhen || !!state.flags[h.visibleWhen.flag] === h.visibleWhen.is;
+}
+// Point-in-polygon (ray cast) for freeform hotspots.
+function inPoly(x: number, y: number, poly: { x: number; y: number }[]) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i], b = poly[j];
+    if (((a.y > y) !== (b.y > y)) && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
+}
+function hitHotspot(x: number, y: number, h: import("./types").Hotspot) {
+  if (h.poly && h.poly.length >= 3) return inPoly(x, y, h.poly);
+  return x >= h.rect.x && x <= h.rect.x + h.rect.w && y >= h.rect.y && y <= h.rect.y + h.rect.h;
+}
+
 function hotspotAt(x: number, y: number) {
   if (y >= SCENE_H) return null;
   // the ever-present camera drone is clickable wherever it's hovering
@@ -106,8 +124,7 @@ function hotspotAt(x: number, y: number) {
   // topmost-last wins; iterate in reverse for "closest" feel
   for (let i = room.hotspots.length - 1; i >= 0; i--) {
     const h = room.hotspots[i];
-    if (x >= h.rect.x && x <= h.rect.x + h.rect.w && y >= h.rect.y && y <= h.rect.y + h.rect.h)
-      return h;
+    if (hsVisible(h) && hitHotspot(x, y, h)) return h;
   }
   return null;
 }
@@ -416,7 +433,7 @@ function drawExitCues(t: number) {
   const bob = Math.sin(t * 3) * 1.5;
   for (const h of room.hotspots) {
     const isExit = !!h.exit || (h.id === "door" && state.flags.doorOpen);
-    if (!isExit) continue;
+    if (!isExit || !hsVisible(h)) continue;
     const cx = Math.round(h.rect.x + h.rect.w / 2);
     const cy = Math.round(h.rect.y + h.rect.h / 2 + bob);
     const hot = hoveredHotspotId === h.id;
@@ -459,11 +476,12 @@ function render(t: number) {
     ctx.fillStyle = "rgba(0,0,0,0.7)";
     ctx.fillRect(0, 0, VW, VH);
     ctx.fillStyle = "#f0ecd0";
-    centerText("THE SHOW RUNS ITSELF", VW / 2, 64, 11);
-    centerText('"make it sexy.', VW / 2, 84, 7);
-    centerText('don\'t let anything get too unsexy."', VW / 2, 96, 7);
-    centerText("— the entire production", VW / 2, 110, 5);
-    centerText("click to play again", VW / 2, 124, 6);
+    centerText("YOU BROADCAST EVERYTHING", VW / 2, 58, 11);
+    centerText("the feeds, the eliminations, the prompt itself —", VW / 2, 76, 5);
+    centerText('"make it sexy. don\'t let anything get too unsexy."', VW / 2, 88, 5);
+    centerText("the whole world is watching the watchers now.", VW / 2, 100, 5);
+    centerText("THE SHOW IS OVER.", VW / 2, 114, 7);
+    centerText("click to play again", VW / 2, 126, 5);
   }
 }
 
@@ -606,6 +624,14 @@ function drawIcon(kind: string, x: number, y: number) {
     ctx.fillStyle = "#d8b24a"; ctx.fillRect(1, 2, 11, 9); // folded towel
     ctx.fillStyle = "#c0556f"; ctx.fillRect(1, 5, 11, 2); // a stripe
     ctx.fillStyle = "rgba(255,255,255,0.25)"; ctx.fillRect(1, 2, 11, 1);
+  } else if (kind === "fish") {
+    ctx.fillStyle = "#8aa6b0"; ctx.beginPath(); ctx.ellipse(6, 7, 5, 3, 0, 0, Math.PI * 2); ctx.fill(); // body
+    ctx.beginPath(); ctx.moveTo(11, 7); ctx.lineTo(14, 4); ctx.lineTo(14, 10); ctx.closePath(); ctx.fill(); // tail
+    ctx.fillStyle = "#1a1a1a"; ctx.fillRect(3, 6, 1, 1); // eye
+  } else if (kind === "drive") {
+    ctx.fillStyle = "#2b2f37"; ctx.fillRect(1, 3, 12, 8); // case
+    ctx.fillStyle = "#3a3f48"; ctx.fillRect(1, 3, 12, 2);
+    ctx.fillStyle = "#54e08c"; ctx.fillRect(11, 8, 1, 1); // activity LED
   }
   ctx.restore();
 }

@@ -26,6 +26,8 @@ export const ITEMS: Record<string, Item> = {
   rod:   { id: "rod",   name: "pool skimmer", icon: "rod" },
   key:   { id: "key",   name: "rusty key",   icon: "key" },
   towel: { id: "towel", name: "beach towel", icon: "towel" },
+  fish:  { id: "fish",  name: "dead fish",   icon: "fish" },
+  drive: { id: "drive", name: "show hard drive", icon: "drive" },
 };
 
 // ----------------------------------------------------------------------------
@@ -45,6 +47,9 @@ const OVERLAYS: Record<string, (ctx: CanvasRenderingContext2D, t: number, state:
   dock: paintDockOverlays,
   beach: paintBeachOverlays,
   control: paintControlOverlays,
+  confessional: paintConfessionalOverlays,
+  galley: paintGalleyOverlays,
+  jetty: paintJettyOverlays,
 };
 
 function buildRoom(id: string, d: RoomData): Room {
@@ -175,8 +180,55 @@ export function interact(
     case "archway":
     case "pooldeck":
     case "pooldoor":
+    case "confbooth":
+    case "confcurtain":
+    case "tojetty":
+    case "beachback":
+    case "galleydoor":
+    case "boat":
       if (verb === "Look at") return { say: ["The way through."] };
       return { say: ["I'll just walk there."] };
+
+    // ---- the confessional ----
+    case "camera":
+      if (verb === "Look at" || verb === "Use" || verb === "Pull") {
+        return { say: [
+          "The confession cam. A producer's sticky note is still stuck to the lens.",
+          'It reads: BROADCAST PASSPHRASE — "make it sexy".',
+          "Of course it's the prompt. It's always the prompt.",
+        ], effect: (s) => { s.flags.sawPass = true; } };
+      }
+      return { say: [`I can't ${verb.toLowerCase()} the camera.`] };
+
+    case "stool":
+      if (verb === "Look at") return { say: ["The confession stool. Worn smooth by a hundred contestants crying on cue."] };
+      if (verb === "Use" || verb === "Push" || verb === "Pull") return { say: ["I sit. The red light blinks. I have nothing to confess that the drone hasn't already filmed."] };
+      return { say: [`I can't ${verb.toLowerCase()} the stool.`] };
+
+    // ---- the galley ----
+    case "freezer":
+      if (verb === "Open" || verb === "Look at" || verb === "Pick up" || verb === "Use") {
+        if (has("fish") || state.flags.gotFish) return { say: ["Just frost and a faint smell of regret now."] };
+        return { say: ["The chest freezer hums. Inside, under a bag of 'SEXY ICE,' a single stiff dead fish.", "Red-tide casualty, probably. Mine now."],
+          effect: (s) => { s.inventory.push(ITEMS.fish); s.flags.gotFish = true; } };
+      }
+      return { say: [`I can't ${verb.toLowerCase()} the freezer.`] };
+    case "emptyfreezer":
+      if (verb === "Look at") return { say: ["Empty but for a bag of SEXY ICE. I already took the fish."] };
+      return { say: ["Nothing left in there worth taking."] };
+
+    case "snacksign":
+      if (verb === "Look at" || verb === "Use") return { say: ["A buzzing neon sign: SEXY SNACKS. Below it, an AI-printed menu: 'deconstructed seduction,' 'flirtini foam,' 'consent crudités.'"] };
+      return { say: [`I can't ${verb.toLowerCase()} the sign.`] };
+
+    // ---- the jetty ----
+    case "trawler":
+      if (verb === "Look at") return { say: ["A fishing trawler, anchored just offshore. Too far to hail. It hasn't moved in days. Maybe it's watching too."] };
+      return { say: [`I can't ${verb.toLowerCase()} a boat that far away.`] };
+    case "water":
+      if (verb === "Look at") return { say: ["The red tide laps at the pilings. Dead fish turn slow circles in it. Bonny was right — you can smell the toxins."] };
+      if (verb === "Use" || verb === "Pick up") return { say: ["Touching that water is how you become a cautionary segment."] };
+      return { say: [`I can't ${verb.toLowerCase()} the water.`] };
 
     case "redtide":
       if (verb === "Look at") return { say: ["The surf has a sickly red shimmer, creeping closer with the tide.", "Bonny would know what it is. Bonny knows everything."] };
@@ -209,13 +261,24 @@ export function interact(
       return { say: [`I can't ${verb.toLowerCase()} the feeds.`] };
 
     case "terminal":
+      // Endgame: insert the show's hard drive AND know the passphrase to broadcast.
+      if (verb === "Use" && withItem === "drive") {
+        if (!state.flags.sawPass)
+          return { say: ["The terminal accepts the hard drive, then asks for a broadcast passphrase.", "I don't have it. Somebody must have written it down somewhere — producers always do."] };
+        return { say: [
+          "I slot the hard drive in and type the passphrase: make it sexy.",
+          "ACCESS GRANTED. Every episode, every feed, the prompt itself — I push it all to the live broadcast.",
+          "Somewhere, a few million phones buzz at once with the truth about Sex House Island.",
+        ], effect: (s) => { s.flags.broadcast = true; s.won = true; } };
+      }
+      if (verb === "Use" && withItem) return { say: [`The terminal has no use for my ${itemName(withItem)}.`] };
       if (verb === "Look at" || verb === "Use" || verb === "Pull" || verb === "Push") {
         return { say: [
           "The whole show runs off this one machine. No producers. No crew. No network. Just this.",
-          "And there's a single instruction on the screen — the prompt steering all of it:",
+          "There's a single instruction on the screen — the prompt steering all of it:",
           '"make it sexy. don\'t let anything get too unsexy."',
-          "That's the entire creative direction. We're being run by an AI and one sentence.",
-        ], effect: (s) => { s.flags.sawPrompt = true; s.won = true; } };
+          "I could BROADCAST all of it... but the drive's been pulled, and it'd want the producers' passphrase.",
+        ], effect: (s) => { s.flags.sawPrompt = true; } };
       }
       return { say: [`I can't ${verb.toLowerCase()} the terminal.`] };
 
@@ -226,6 +289,19 @@ export function interact(
       return { say: ["I swat at it. It bobs out of reach, unbothered. There is no getting rid of it."] };
 
     case "parrot":
+      if (verb === "Give" && withItem === "fish") {
+        return { say: [
+          "I offer the pelican the dead fish.",
+          "It snaps the fish down whole — and, delighted, coughs up the thing it had been hoarding in that enormous pouch:",
+          "a grimy little hard drive, stencilled SEX HOUSE ISLAND — PRODUCTION.",
+        ], effect: (s) => {
+          const i = s.inventory.findIndex((x) => x.id === "fish");
+          if (i >= 0) s.inventory.splice(i, 1);
+          s.inventory.push(ITEMS.drive); s.flags.gotDrive = true;
+        } };
+      }
+      if (verb === "Give" && withItem) return { say: [`The pelican eyes my ${itemName(withItem)} and looks unimpressed. It wants something fishier.`] };
+      if (verb === "Look at" && !state.flags.gotDrive) return { say: ["A large pelican. Its pouch bulges with something hard and rectangular. It has the smug look of a creature holding evidence."] };
       if (verb === "Talk to")
         return {
           dialogue: {
@@ -235,9 +311,17 @@ export function interact(
                 npc: ["Squawk! Welcome to Sex House Island. Season one hundred and something!"],
                 choices: [
                   { text: "How do I get into the villa?", goto: "hint" },
+                  { text: "What's in your pouch?", goto: "pouch" },
                   { text: "Why are we locked out?", goto: "lore" },
                   { text: "(Leave)", goto: "bye" },
                 ],
+              },
+              pouch: {
+                npc: [
+                  "Squawk! MINE. Shiny. Rectangle. Hummmms. The producers want it BAD.",
+                  "Bird does not share... unless bird is FED. A nice fish, maybe. A cold one. Squawk!",
+                ],
+                choices: [{ text: "Noted, bird.", goto: "hi" }],
               },
               hint: {
                 npc: [
@@ -300,6 +384,14 @@ export function interact(
       if (verb === "Look at") return { say: ["A rusty key, fresh from the deep end. It smells of chlorine and despair."] };
       return { say: [`I can't ${verb.toLowerCase()} the key like that.`] };
 
+    case "fish":
+      if (verb === "Look at") return { say: ["A stiff dead fish, slightly freezer-burned. A red-tide casualty. Smells like leverage."] };
+      return { say: [`I can't ${verb.toLowerCase()} the fish like that.`] };
+
+    case "drive":
+      if (verb === "Look at") return { say: ["The show's production hard drive, warm and faintly humming. Everything they've ever filmed is on here. Everything WE'VE ever done is on here."] };
+      return { say: [`Better to use the hard drive ON something.`] };
+
     case "sign":
       if (verb === "Look at")
         return { say: ["A wrought-iron lantern by the villa door. Inside, it's warm and dry. Out here, it is not."] };
@@ -332,6 +424,24 @@ function paintControlOverlays(ctx: CanvasRenderingContext2D, t: number, _state: 
   ctx.fillStyle = `rgba(120,170,210,${0.04 + 0.035 * Math.sin(t * 6)})`;
   ctx.fillRect(36, 26, 248, 46);
   drawSprite(ctx, MACK_SPRITE, 214, 80, 1.9); // Mackenzie, lurking by the racks
+}
+
+function paintConfessionalOverlays(ctx: CanvasRenderingContext2D, t: number, _state: GameState) {
+  // the camera's red record light, blinking
+  if (Math.sin(t * 4) > 0) { ctx.fillStyle = "rgba(255,60,50,0.9)"; ctx.fillRect(206, 52, 2, 2); }
+}
+
+function paintGalleyOverlays(ctx: CanvasRenderingContext2D, t: number, state: GameState) {
+  // cold blue glow spilling from the open freezer (dimmer once the fish is gone)
+  const g = (state.flags.gotFish ? 0.06 : 0.13) + 0.03 * Math.sin(t * 5);
+  ctx.fillStyle = `rgba(150,210,235,${g})`;
+  ctx.fillRect(126, 60, 74, 30);
+}
+
+function paintJettyOverlays(ctx: CanvasRenderingContext2D, t: number, _state: GameState) {
+  // a few drifting glints on the red-tide water
+  ctx.fillStyle = "rgba(220,120,120,0.5)";
+  for (let i = 0; i < 5; i++) ctx.fillRect(50 + ((t * 8 + i * 60) % 240), 70 + (i % 3) * 3, 4, 1);
 }
 
 // ---- Conversations -------------------------------------------------------
