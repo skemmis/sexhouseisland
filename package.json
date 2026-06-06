@@ -16,7 +16,9 @@
     "gen:variants": "tsx scripts/gen-variants.ts",
     "bake:variant": "tsx scripts/bake-variant.ts",
     "start": "node server.mjs",
-    "serve": "npm run build && node server.mjs"
+    "serve": "npm run build && node server.mjs",
+    "scenes:pull": "node scripts/scenes.mjs pull",
+    "scenes:push": "node scripts/scenes.mjs push"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0",

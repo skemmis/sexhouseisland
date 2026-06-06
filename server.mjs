@@ -76,6 +76,10 @@ app.get("/api/rooms", async (_req, res) => {
   try { res.json(await readRooms()); } catch (e) { res.status(500).send(String(e)); }
 });
 app.post("/api/rooms", async (req, res) => {
+  // Gate writes when ADMIN_TOKEN is set (so a public deploy can't be overwritten
+  // by anyone). The editor and the scenes:push script send x-admin-token.
+  if (process.env.ADMIN_TOKEN && req.get("x-admin-token") !== process.env.ADMIN_TOKEN)
+    return res.status(401).send("missing or bad admin token");
   const data = req.body;
   if (!data?.rooms || !data?.start) return res.status(400).send("invalid rooms file");
   try { await writeRooms(data); res.json({ ok: true }); } catch (e) { res.status(500).send(String(e)); }

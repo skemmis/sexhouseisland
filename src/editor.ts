@@ -176,16 +176,29 @@ function addPoint(p: { x: number; y: number }) {
   setDirty();
 }
 
+async function postRooms(token: string) {
+  return fetch("/api/rooms", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-admin-token": token },
+    body: JSON.stringify(file, null, 2),
+  });
+}
 async function doSave() {
   masks[roomId] && (room().walk = encodeMask(mask()));
   try {
-    const r = await fetch("/api/rooms", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(file, null, 2) });
+    let token = localStorage.getItem("slopp_admin_token") ?? "";
+    let r = await postRooms(token);
+    if (r.status === 401) { // gated deploy: ask for the token once, remember it
+      token = prompt("Admin token to save changes:") ?? "";
+      localStorage.setItem("slopp_admin_token", token);
+      r = await postRooms(token);
+    }
     if (!r.ok) throw new Error(await r.text());
     setDirty(false);
     statusEl().textContent = "saved ✓";
   } catch (e) {
     statusEl().className = "dirty";
-    statusEl().textContent = "save failed (run the server: npm start) — " + (e as Error).message;
+    statusEl().textContent = "save failed (run the server / check token) — " + (e as Error).message;
   }
 }
 
