@@ -10,9 +10,9 @@
     "dock": {
       "backdrop": "poolDeck",
       "floor": {
-        "minY": 110,
+        "minY": 67,
         "maxY": 132,
-        "minScale": 0.78,
+        "minScale": 0.53,
         "maxScale": 1.18
       },
       "hotspots": [
@@ -20,13 +20,13 @@
           "id": "door",
           "name": "villa door",
           "rect": {
-            "x": 6,
+            "x": 36,
             "y": 44,
-            "w": 30,
-            "h": 50
+            "w": 25,
+            "h": 52
           },
           "walkTo": {
-            "x": 44,
+            "x": 74,
             "y": 118
           },
           "face": 0
@@ -35,14 +35,14 @@
           "id": "well",
           "name": "the deep end",
           "rect": {
-            "x": 104,
-            "y": 74,
-            "w": 116,
-            "h": 46
+            "x": 159,
+            "y": 69,
+            "w": 73,
+            "h": 12
           },
           "walkTo": {
-            "x": 150,
-            "y": 124
+            "x": 205,
+            "y": 119
           },
           "face": 0
         },
@@ -69,14 +69,14 @@
           "id": "parrot",
           "name": "pelican",
           "rect": {
-            "x": 44,
-            "y": 100,
-            "w": 40,
-            "h": 32
+            "x": 236,
+            "y": 46,
+            "w": 11,
+            "h": 13
           },
           "walkTo": {
-            "x": 66,
-            "y": 130
+            "x": 257,
+            "y": 76
           },
           "face": -1
         },
@@ -84,14 +84,14 @@
           "id": "sign",
           "name": "the lantern",
           "rect": {
-            "x": 36,
-            "y": 26,
+            "x": 44,
+            "y": 21,
             "w": 16,
             "h": 18
           },
           "walkTo": {
-            "x": 44,
-            "y": 118
+            "x": 52,
+            "y": 113
           },
           "face": 0
         },
@@ -118,14 +118,14 @@
           "id": "towel",
           "name": "beach towel",
           "rect": {
-            "x": 284,
-            "y": 60,
-            "w": 32,
-            "h": 18
+            "x": 276,
+            "y": 86,
+            "w": 19,
+            "h": 9
           },
           "walkTo": {
-            "x": 284,
-            "y": 120
+            "x": 276,
+            "y": 127
           },
           "face": 1,
           "visibleWhen": {
@@ -137,14 +137,14 @@
           "id": "archway",
           "name": "the archway to the beach",
           "rect": {
-            "x": 126,
-            "y": 34,
+            "x": 290,
+            "y": 97,
             "w": 30,
             "h": 38
           },
           "walkTo": {
-            "x": 118,
-            "y": 126
+            "x": 282,
+            "y": 136
           },
           "face": 0,
           "exit": {
@@ -160,14 +160,14 @@
           "id": "confbooth",
           "name": "the confessional booth",
           "rect": {
-            "x": 0,
-            "y": 100,
-            "w": 18,
-            "h": 34
+            "x": 136,
+            "y": 46,
+            "w": 15,
+            "h": 25
           },
           "walkTo": {
-            "x": 16,
-            "y": 126
+            "x": 152,
+            "y": 72
           },
           "face": -1,
           "exit": {
@@ -184,22 +184,23 @@
         {
           "id": "pelican",
           "sprite": "pelican",
-          "x": 48,
-          "y": 102,
-          "scale": 1.8
+          "x": 235,
+          "y": 46,
+          "scale": 0.8
         },
         {
           "id": "towel",
           "sprite": "towel",
-          "x": 289,
-          "y": 62,
-          "scale": 1.8,
+          "x": 278,
+          "y": 87,
+          "scale": 1.25,
           "visibleWhen": {
             "flag": "gotTowel",
             "is": false
           }
         }
-      ]
+      ],
+      "walk": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAeAAAAAAAAB4AAPgAAAAAAMAPAADgAQAAAAD4AQAAwAcAAAC+fwAAAIAfAAAA/w8AAAAAP34AgP8DAAAAAD7+APD/AAAAAAD8/wD////////////g/////////////P////////////z////////////8/////////////P////////////z//////////3/8//////////9/AACA////////fw=="
     },
     "beach": {
       "backdrop": "beach",
