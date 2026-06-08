@@ -7,6 +7,7 @@ import { CONTROL_BG } from "./controlBg";
 import { CONFESSIONAL_BG } from "./confessionalBg";
 import { GALLEY_BG } from "./galleyBg";
 import { JETTY_BG } from "./jettyBg";
+import { AIIA_BG } from "./aiiaBg";
 
 export const BACKDROPS: Record<string, string> = {
   poolDeck: POOL_DECK_BG,
@@ -15,4 +16,5 @@ export const BACKDROPS: Record<string, string> = {
   confessional: CONFESSIONAL_BG,
   galley: GALLEY_BG,
   jetty: JETTY_BG,
+  aiia: AIIA_BG,
 };

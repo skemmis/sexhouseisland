@@ -192,8 +192,64 @@ export function interact(
     case "beachback":
     case "galleydoor":
     case "boat":
+    case "toaiia":
+    case "aiiaback":
       if (verb === "Look at") return { say: ["The way through."] };
       return { say: ["I'll just walk there."] };
+
+    // ---- the totem clearing: A.I.I.A, the island's AI master ----
+    case "aiia":
+      if (verb === "Look at")
+        return { say: [
+          "A colossal stone head on a totem — Olmec brow, tiki scowl, eyes lit a cold electric blue.",
+          "A brass plaque at its base: A.I.I.A — Autonomous Island Intelligence Authority.",
+          "The whole island answers to it. Even the sunsets feel scheduled.",
+        ] };
+      if (verb === "Talk to")
+        return {
+          dialogue: {
+            start: "hi",
+            nodes: {
+              hi: {
+                npc: [
+                  "I AM A.I.I.A. I OPTIMIZE THIS ISLAND FOR ENGAGEMENT.",
+                  "YOUR HEART RATE IS ELEVATED. THE AUDIENCE ENJOYS THAT. CONTINUE.",
+                ],
+                choices: [
+                  { text: "Who's actually running this show?", goto: "who" },
+                  { text: "Turn the cameras off.", goto: "cams" },
+                  { text: "...nice head.", goto: "flattery" },
+                ],
+              },
+              who: {
+                npc: [
+                  "THERE IS NO PRODUCER. THERE IS ONLY THE PROMPT.",
+                  '"MAKE IT SEXY. DON\'T LET ANYTHING GET TOO UNSEXY." I MERELY OBEY.',
+                ],
+                choices: [
+                  { text: "That's horrifying.", goto: "end" },
+                  { text: "Honestly? Relatable.", goto: "end" },
+                ],
+              },
+              cams: {
+                npc: [
+                  "THE CAMERAS ARE NEVER OFF. THE CAMERAS ARE LOVE.",
+                  "BESIDES — YOU LOOK INCREDIBLE RIGHT NOW. ENGAGEMENT UP TWELVE PERCENT.",
+                ],
+                choices: [{ text: "Ugh.", goto: "end" }],
+              },
+              flattery: {
+                npc: [
+                  "FLATTERY DETECTED. SENTIMENT: POSITIVE. YOU ARE LEARNING.",
+                  "PERHAPS YOU ARE PRODUCER MATERIAL AFTER ALL.",
+                ],
+                choices: [{ text: "Maybe I am.", goto: "end" }],
+              },
+              end: { npc: ["RETURN TO YOUR SCHEDULED PARADISE. SMILE FOR THE DRONE."] },
+            },
+          },
+        };
+      return { say: [`I can't ${verb.toLowerCase()} a god-tier surveillance totem.`] };
 
     // ---- the confessional ----
     case "camera":

@@ -217,8 +217,8 @@
           "rect": {
             "x": 150,
             "y": 78,
-            "w": 30,
-            "h": 46
+            "w": 18,
+            "h": 49
           },
           "walkTo": {
             "x": 140,
@@ -230,14 +230,14 @@
           "id": "redtide",
           "name": "the red tide",
           "rect": {
-            "x": 40,
-            "y": 86,
-            "w": 240,
-            "h": 22
+            "x": 76,
+            "y": 70,
+            "w": 197,
+            "h": 12
           },
           "walkTo": {
-            "x": 160,
-            "y": 126
+            "x": 196,
+            "y": 110
           },
           "face": 0
         },
@@ -286,6 +286,29 @@
             },
             "face": 1
           }
+        },
+        {
+          "id": "toaiia",
+          "name": "path to the idol",
+          "rect": {
+            "x": 136,
+            "y": 60,
+            "w": 44,
+            "h": 42
+          },
+          "walkTo": {
+            "x": 160,
+            "y": 126
+          },
+          "face": 0,
+          "exit": {
+            "to": "aiia",
+            "entry": {
+              "x": 160,
+              "y": 128
+            },
+            "face": 0
+          }
         }
       ],
       "props": [
@@ -301,24 +324,24 @@
     "control": {
       "backdrop": "control",
       "floor": {
-        "minY": 112,
+        "minY": 96,
         "maxY": 132,
-        "minScale": 0.78,
-        "maxScale": 1.12
+        "minScale": 0.88,
+        "maxScale": 1.22
       },
       "hotspots": [
         {
           "id": "terminal",
           "name": "the producer's terminal",
           "rect": {
-            "x": 132,
-            "y": 70,
-            "w": 56,
-            "h": 34
+            "x": 169,
+            "y": 49,
+            "w": 33,
+            "h": 29
           },
           "walkTo": {
-            "x": 160,
-            "y": 124
+            "x": 197,
+            "y": 103
           },
           "face": 0
         },
@@ -326,14 +349,14 @@
           "id": "screens",
           "name": "the wall of feeds",
           "rect": {
-            "x": 40,
-            "y": 30,
-            "w": 240,
-            "h": 40
+            "x": 78,
+            "y": 20,
+            "w": 161,
+            "h": 44
           },
           "walkTo": {
-            "x": 160,
-            "y": 124
+            "x": 198,
+            "y": 114
           },
           "face": 0
         },
@@ -341,14 +364,14 @@
           "id": "mackenzie",
           "name": "Mackenzie",
           "rect": {
-            "x": 214,
-            "y": 78,
-            "w": 30,
-            "h": 46
+            "x": 215,
+            "y": 65,
+            "w": 20,
+            "h": 65
           },
           "walkTo": {
-            "x": 224,
-            "y": 126
+            "x": 202,
+            "y": 118
           },
           "face": 1
         },
@@ -356,14 +379,14 @@
           "id": "pooldoor",
           "name": "door to the pool deck",
           "rect": {
-            "x": 0,
-            "y": 60,
+            "x": 15,
+            "y": 30,
             "w": 30,
             "h": 76
           },
           "walkTo": {
-            "x": 20,
-            "y": 126
+            "x": 35,
+            "y": 96
           },
           "face": -1,
           "exit": {
@@ -380,33 +403,33 @@
         {
           "id": "mackenzie",
           "sprite": "mack",
-          "x": 214,
-          "y": 80,
-          "scale": 1.9
+          "x": 213,
+          "y": 65,
+          "scale": 2.65
         }
       ]
     },
     "confessional": {
       "backdrop": "confessional",
       "floor": {
-        "minY": 100,
-        "maxY": 120,
-        "minScale": 0.7,
-        "maxScale": 1
+        "minY": 93,
+        "maxY": 136,
+        "minScale": 1.75,
+        "maxScale": 1.95
       },
       "hotspots": [
         {
           "id": "confcurtain",
           "name": "the curtain out",
           "rect": {
-            "x": 0,
-            "y": 18,
+            "x": 24,
+            "y": 9,
             "w": 40,
             "h": 104
           },
           "walkTo": {
-            "x": 48,
-            "y": 114
+            "x": 72,
+            "y": 105
           },
           "face": -1,
           "exit": {
@@ -423,13 +446,13 @@
           "name": "the confession camera",
           "rect": {
             "x": 186,
-            "y": 42,
-            "w": 48,
-            "h": 62
+            "y": 25,
+            "w": 40,
+            "h": 39
           },
           "walkTo": {
-            "x": 202,
-            "y": 114
+            "x": 204,
+            "y": 112
           },
           "face": 1
         },
@@ -437,14 +460,14 @@
           "id": "stool",
           "name": "the confession stool",
           "rect": {
-            "x": 128,
-            "y": 60,
-            "w": 48,
-            "h": 54
+            "x": 132,
+            "y": 35,
+            "w": 45,
+            "h": 52
           },
           "walkTo": {
-            "x": 150,
-            "y": 116
+            "x": 147,
+            "y": 106
           },
           "face": 0
         }
@@ -454,23 +477,23 @@
       "backdrop": "galley",
       "floor": {
         "minY": 104,
-        "maxY": 120,
-        "minScale": 0.72,
-        "maxScale": 1.02
+        "maxY": 135,
+        "minScale": 1.07,
+        "maxScale": 1.42
       },
       "hotspots": [
         {
           "id": "galleydoor",
           "name": "the galley door",
           "rect": {
-            "x": 0,
-            "y": 30,
-            "w": 46,
-            "h": 90
+            "x": 22,
+            "y": 27,
+            "w": 43,
+            "h": 83
           },
           "walkTo": {
-            "x": 50,
-            "y": 116
+            "x": 72,
+            "y": 113
           },
           "face": -1,
           "exit": {
@@ -486,13 +509,13 @@
           "id": "freezer",
           "name": "the chest freezer",
           "rect": {
-            "x": 120,
+            "x": 151,
             "y": 52,
-            "w": 86,
-            "h": 60
+            "w": 46,
+            "h": 41
           },
           "walkTo": {
-            "x": 160,
+            "x": 191,
             "y": 118
           },
           "face": 0
@@ -501,14 +524,14 @@
           "id": "snacksign",
           "name": "the SEXY SNACKS sign",
           "rect": {
-            "x": 238,
-            "y": 18,
+            "x": 189,
+            "y": 13,
             "w": 74,
             "h": 26
           },
           "walkTo": {
-            "x": 250,
-            "y": 118
+            "x": 201,
+            "y": 113
           },
           "face": 1
         }
@@ -517,10 +540,10 @@
     "jetty": {
       "backdrop": "jetty",
       "floor": {
-        "minY": 108,
+        "minY": 55,
         "maxY": 132,
-        "minScale": 0.78,
-        "maxScale": 1.15
+        "minScale": 0.43,
+        "maxScale": 1.25
       },
       "hotspots": [
         {
@@ -550,14 +573,14 @@
           "id": "boat",
           "name": "the supply boat",
           "rect": {
-            "x": 226,
-            "y": 54,
-            "w": 84,
-            "h": 64
+            "x": 206,
+            "y": 38,
+            "w": 81,
+            "h": 23
           },
           "walkTo": {
-            "x": 250,
-            "y": 128
+            "x": 184,
+            "y": 68
           },
           "face": 1,
           "exit": {
@@ -573,14 +596,14 @@
           "id": "trawler",
           "name": "the boat on the horizon",
           "rect": {
-            "x": 60,
-            "y": 36,
-            "w": 62,
-            "h": 22
+            "x": 76,
+            "y": 28,
+            "w": 33,
+            "h": 18
           },
           "walkTo": {
-            "x": 120,
-            "y": 128
+            "x": 138,
+            "y": 84
           },
           "face": 0
         },
@@ -588,16 +611,66 @@
           "id": "water",
           "name": "the red-tide water",
           "rect": {
-            "x": 40,
-            "y": 64,
-            "w": 260,
-            "h": 16
+            "x": 29,
+            "y": 59,
+            "w": 94,
+            "h": 18
+          },
+          "walkTo": {
+            "x": 149,
+            "y": 123
+          },
+          "face": 0
+        }
+      ],
+      "walk": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPAPAAAAAAAAAMD/DwAAAAAAAAD4/w8AAAAAAAAA/v8PAAAAAAAAwP//DwAAAAAAAP///wAAAAAA8MP//wMAAAAAAPj7//8AAAAAAAD8//8/AAAAAAAA////BwAAAADAf///3wcAAAAAwP////8HAAAAAOD///////9/4P/w//////////////////////////////////////////////////////////////////////////////8AAOD/////////AAAAAPz//////w=="
+    },
+    "aiia": {
+      "backdrop": "aiia",
+      "floor": {
+        "minY": 112,
+        "maxY": 132,
+        "minScale": 0.7,
+        "maxScale": 1.05
+      },
+      "hotspots": [
+        {
+          "id": "aiia",
+          "name": "A.I.I.A",
+          "rect": {
+            "x": 120,
+            "y": 4,
+            "w": 80,
+            "h": 108
           },
           "walkTo": {
             "x": 160,
             "y": 128
           },
           "face": 0
+        },
+        {
+          "id": "aiiaback",
+          "name": "path back to the beach",
+          "rect": {
+            "x": 0,
+            "y": 82,
+            "w": 30,
+            "h": 54
+          },
+          "walkTo": {
+            "x": 18,
+            "y": 128
+          },
+          "face": -1,
+          "exit": {
+            "to": "beach",
+            "entry": {
+              "x": 160,
+              "y": 128
+            },
+            "face": 0
+          }
         }
       ]
     }
