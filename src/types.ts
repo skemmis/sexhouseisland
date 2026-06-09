@@ -64,6 +64,12 @@ export interface Dialogue {
   speakerPortrait?: string;
 }
 
+/** A depth-sorted drawable: `baseline` is its feet y (larger = nearer/in front). */
+export interface Actor {
+  baseline: number;
+  draw: () => void;
+}
+
 /** A room: a backdrop, a walkable floor band, hotspots, and characters. */
 export interface Room {
   id: string;
@@ -74,8 +80,9 @@ export interface Room {
   props?: Prop[];
   /** Base64 walkable-area mask (see src/walk.ts); absent = free movement. */
   walk?: string;
-  /** Draws the painted backdrop. Replace with a loaded image in production. */
-  paint: (ctx: CanvasRenderingContext2D, t: number, state: GameState) => void;
+  /** Paint the room. `actor` (the player) is depth-sorted with the room's
+   *  character sprites by feet baseline. */
+  paint: (ctx: CanvasRenderingContext2D, t: number, state: GameState, actor?: Actor) => void;
 }
 
 /** A placed sprite (set dressing / item) drawn over the backdrop. Top-left at

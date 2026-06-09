@@ -18,28 +18,32 @@ const titleBackdrop = makeBackdrop(TITLE_BG); // painted title art (empty until 
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-// The inescapable camera drone: hovers up-and-right of the player, bobbing.
-// Its position is shared by the draw + the clickable hotspot below.
+// The inescapable camera drone: hovers up-and-right of the player, bobbing, and
+// scales with the player's depth so it sits at his apparent distance.
 function dronePos(api: EngineApi) {
+  const s = api.playerScale;
   return {
-    x: Math.round(clamp(api.playerPos.x + 18, 12, api.VW - 12)),
-    y: Math.round(clamp(api.playerPos.y - 52 * api.playerScale - 4 + Math.sin(api.t * 4) * 1.5, 8, api.SCENE_H - 26)),
+    s,
+    x: Math.round(clamp(api.playerPos.x + 18 * s, 12, api.VW - 12)),
+    y: Math.round(clamp(api.playerPos.y - 52 * s - 4 + Math.sin(api.t * 4) * 1.5, 8, api.SCENE_H - 26)),
   };
 }
 
 function drawDrone(api: EngineApi) {
   const ctx = api.ctx;
-  const { x: cx, y: cy } = dronePos(api);
+  const { x: cx, y: cy, s } = dronePos(api);
   ctx.save();
   ctx.imageSmoothingEnabled = false;
-  ctx.strokeStyle = "rgba(185,195,205,0.5)"; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(cx - 8, cy - 3.5); ctx.lineTo(cx - 2, cy - 3.5); ctx.moveTo(cx + 2, cy - 3.5); ctx.lineTo(cx + 8, cy - 3.5); ctx.stroke();
+  ctx.translate(cx, cy);
+  ctx.scale(s, s); // scale the whole drone with the player's depth
+  ctx.strokeStyle = "rgba(185,195,205,0.5)"; ctx.lineWidth = 1 / s;
+  ctx.beginPath(); ctx.moveTo(-8, -3.5); ctx.lineTo(-2, -3.5); ctx.moveTo(2, -3.5); ctx.lineTo(8, -3.5); ctx.stroke();
   ctx.strokeStyle = "#3a3f48";
-  ctx.beginPath(); ctx.moveTo(cx - 5, cy - 3.5); ctx.lineTo(cx - 5, cy - 1.5); ctx.moveTo(cx + 5, cy - 3.5); ctx.lineTo(cx + 5, cy - 1.5); ctx.stroke();
-  ctx.fillStyle = "#1c2026"; ctx.fillRect(cx - 4, cy - 1, 8, 5);
-  ctx.fillStyle = "#2c313a"; ctx.fillRect(cx - 3, cy - 2, 6, 2);
-  ctx.fillStyle = "#05060a"; ctx.fillRect(cx - 1, cy + 3, 2, 2); // downward lens
-  if (Math.sin(api.t * 6) > 0) { ctx.fillStyle = "#ff3b30"; ctx.fillRect(cx + 3, cy, 1, 1); } // blinking red light
+  ctx.beginPath(); ctx.moveTo(-5, -3.5); ctx.lineTo(-5, -1.5); ctx.moveTo(5, -3.5); ctx.lineTo(5, -1.5); ctx.stroke();
+  ctx.fillStyle = "#1c2026"; ctx.fillRect(-4, -1, 8, 5);
+  ctx.fillStyle = "#2c313a"; ctx.fillRect(-3, -2, 6, 2);
+  ctx.fillStyle = "#05060a"; ctx.fillRect(-1, 3, 2, 2); // downward lens
+  if (Math.sin(api.t * 6) > 0) { ctx.fillStyle = "#ff3b30"; ctx.fillRect(3, 0, 1, 1); } // blinking red light
   ctx.restore();
 }
 
@@ -160,11 +164,11 @@ export const GAME: GameHooks = {
   },
 
   extraHotspots(api) {
-    const { x: cx, y: cy } = dronePos(api);
+    const { x: cx, y: cy, s } = dronePos(api);
     return [{
       id: "drone",
       name: "the drone",
-      rect: { x: cx - 9, y: cy - 5, w: 18, h: 12 },
+      rect: { x: Math.round(cx - 9 * s), y: Math.round(cy - 5 * s), w: Math.round(18 * s), h: Math.round(12 * s) },
       walkTo: { x: clamp(api.playerPos.x, 8, api.VW - 8), y: api.playerPos.y },
       face: 0,
     }];

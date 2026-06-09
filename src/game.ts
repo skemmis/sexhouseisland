@@ -1,4 +1,4 @@
-import type { ActionResult, Dialogue, GameState, Item, Room, RoomData, RoomsFile, Verb } from "./types";
+import type { ActionResult, Actor, Dialogue, GameState, Item, Room, RoomData, RoomsFile, Verb } from "./types";
 import { drawSprite } from "./pixels/render";
 import { makeBackdrop, drawBackdrop, type Backdrop } from "./background";
 import { BACKDROPS } from "./game/assets";
@@ -46,15 +46,30 @@ const OVERLAYS: Record<string, (ctx: CanvasRenderingContext2D, t: number, state:
   jetty: paintJettyOverlays,
 };
 
-// Draw a room's placed sprites (props) from data, respecting visibility flags.
-function drawProps(ctx: CanvasRenderingContext2D, props: RoomData["props"], state: GameState) {
-  if (!props) return;
+// Placed sprites (props) as depth-sortable standees: baseline = feet (bottom).
+function propStandees(ctx: CanvasRenderingContext2D, props: RoomData["props"], state: GameState): Actor[] {
+  if (!props) return [];
+  const out: Actor[] = [];
   for (const p of props) {
     if (p.visibleWhen && !!state.flags[p.visibleWhen.flag] !== p.visibleWhen.is) continue;
     const sp = SPRITES[p.sprite];
-    if (sp) drawSprite(ctx, sp, p.x, p.y, p.scale * baseScale(p.sprite));
+    if (!sp) continue;
+    const sc = p.scale * baseScale(p.sprite);
+    out.push({ baseline: p.y + sp.h * sc, draw: () => drawSprite(ctx, sp, p.x, p.y, sc) });
   }
+  return out;
 }
+
+// Code-driven character standees (positioned/visible by state), depth-sorted
+// with the player. Dock Mike lives here (his pose is driven by the dive).
+const CODE_STANDEES: Record<string, (ctx: CanvasRenderingContext2D, state: GameState) => Actor[]> = {
+  dock: (ctx, state) => {
+    if (state.flags.mikeGone || state.flags.mikeJumping) return [];
+    const ms = 1.7 * baseScale("mike");
+    const x = 278 - (MIKE_SPRITE.w * ms) / 2, y = 100 - (MIKE_SPRITE.h * ms) / 2; // centred on dive start
+    return [{ baseline: y + MIKE_SPRITE.h * ms, draw: () => drawSprite(ctx, MIKE_SPRITE, x, y, ms) }];
+  },
+};
 
 function buildRoom(id: string, d: RoomData): Room {
   return {
@@ -63,13 +78,17 @@ function buildRoom(id: string, d: RoomData): Room {
     hotspots: d.hotspots,
     props: d.props,
     walk: d.walk,
-    paint: (ctx, t, state) => {
+    paint: (ctx, t, state, actor) => {
       if (!drawBackdrop(ctx, bgFor(d.backdrop), 0, 0, 320, 136)) {
         ctx.fillStyle = "#0f151c";
         ctx.fillRect(0, 0, 320, 136);
       }
-      drawProps(ctx, d.props, state); // editor-placed sprites
-      OVERLAYS[id]?.(ctx, t, state); // procedural effects + dynamic Mike
+      // characters + props + the player, drawn back-to-front by feet baseline
+      const standees = [...propStandees(ctx, d.props, state), ...(CODE_STANDEES[id]?.(ctx, state) ?? [])];
+      if (actor) standees.push(actor);
+      standees.sort((a, b) => a.baseline - b.baseline);
+      for (const s of standees) s.draw();
+      OVERLAYS[id]?.(ctx, t, state); // foreground environmental effects
     },
   };
 }
@@ -550,18 +569,7 @@ function mackDialogue(): Dialogue {
 // State-dependent objects, drawn over the painted backdrop. Positioned to match
 // the painted layout (pelican on the front deck, skimmer at the pool's left).
 function paintDockOverlays(ctx: CanvasRenderingContext2D, _t: number, state: GameState) {
-  // (pelican + towel are props now; placed in the editor.)
-
-  // Mike White, lounging by the pool — hidden once he's gone, or while the
-  // dive cutscene is animating him (the engine draws the diving Mike then). Stays
-  // in code because his position is driven by the cutscene, not static.
-  if (!state.flags.mikeGone && !state.flags.mikeJumping) {
-    // drawn centered on the dive's start point (278,100) so there's no jump when
-    // the cannonball cutscene takes over.
-    const ms = 1.7 * baseScale("mike");
-    drawSprite(ctx, MIKE_SPRITE, 278 - (MIKE_SPRITE.w * ms) / 2, 100 - (MIKE_SPRITE.h * ms) / 2, ms);
-  }
-
+  // (pelican + towel are props; Mike is a depth-sorted standee — see CODE_STANDEES.)
   if (!state.flags.gotRod) {
     ctx.strokeStyle = "#9aa3ad";
     ctx.lineWidth = 1;

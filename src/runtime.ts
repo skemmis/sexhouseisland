@@ -483,8 +483,8 @@ function render(t: number) {
   // scene
   const api = makeApi(0, t);
   extraHotspots = GAME.extraHotspots?.(api) ?? []; // refresh dynamic hotspots (drone)
-  room.paint(ctx, t, state);
-  player.draw(ctx, room);
+  // the player is depth-sorted with the room's character sprites by feet baseline
+  room.paint(ctx, t, state, { baseline: player.pos.y, draw: () => player.draw(ctx, room) });
   drawExitCues(t); // show where you can leave the room
   GAME.drawWorld?.(api); // game actors over the scene + cues (Mike's dive, the drone)
 
