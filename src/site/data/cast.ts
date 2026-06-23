@@ -83,13 +83,13 @@ export const CAST: CastMember[] = [
     tag: "Two mics • One agenda",
   },
   {
-    id: "coltyn",
-    name: "Coltyn",
+    id: "greysuit",
+    name: "Greysuit",
     epithet: "The Heartthrob",
     age: "Unverifiable",
-    hometown: "The Cloud",
+    hometown: "Wardrobe, Stage 3",
     bio:
-      "Coltyn is sensitive, attentive, and remembers everything you've ever told him — because he's one of the House's AI performers, embodied nightly by a rotating team of contractors in skintight gray. He insists the connection is real. The connection may, in fact, be real. That's the whole problem.",
+      "Greysuit is sensitive, attentive, and remembers everything you've ever told him — because he's one of the House's AI performers: a skintight gray bodysuit worn by a rotating team of anonymous contractors, with an iPad strapped over the face to display his expressions. He insists the connection is real. The connection may, in fact, be real. That's the whole problem.",
     quote: "I'd never lie to you. I literally can't. It's in my system prompt.",
     tag: "First-ever on-camera A.I. romance",
   },
@@ -114,5 +114,16 @@ export const CAST: CastMember[] = [
       "Marco is always toweling off and never quite dry. Because it's impossible to mic a wet man, he's the only contestant the others trust with a secret. There is no footage of Marco fully dry. Cinematographers call achieving such a shot 'shooting the moon.'",
     quote: "Don't worry about the water. Tell me everything.",
     tag: "Confidant • Perpetually damp",
+  },
+  {
+    id: "mckenzie",
+    name: "McKenzie",
+    epithet: "The Nu-Metal Girl",
+    age: "20",
+    hometown: "Circa 2003",
+    bio:
+      "McKenzie is twenty years old and into basically everything a 14-year-old boy was into in 2003. White Pony Deftones hoodie, a Follow The Leader Korn tattoo, an eyebrow piercing, immaculate black eyeliner, and one question for every contestant: have you heard of P.O.D.? Producers find her demographically baffling and, somehow, very real.",
+    quote: "Have you heard of P.O.D.? Like, the band? It's fine, nobody has.",
+    tag: "Korn-core • Eyeliner-forward",
   },
 ];

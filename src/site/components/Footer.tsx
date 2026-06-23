@@ -12,7 +12,7 @@ const FOOTNOTES = [
   "“Fully autonomous” includes a 24-hour anonymous human contractor team in skintight gray bodysuits whom we are legally required to mention exactly once.",
   "Contestant ages, vital signs, and consent are continuously verified by A.I.I.A. and are accurate to within several years.",
   "“Required to watch” is enforced via the House WiFi, which is itself not guaranteed to be online. See footnote 2.",
-  "O-Book™ markets are a dramatization for promotional purposes. No real money, no real pelicans, no real Coltyn.",
+  "O-Book™ markets are a dramatization for promotional purposes. No real money, no real pelicans, no real Greysuit.",
 ];
 
 export function Footer() {

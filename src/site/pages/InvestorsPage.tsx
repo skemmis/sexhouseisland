@@ -90,8 +90,9 @@ export function InvestorsPage() {
             </ol>
             <p className="muted">
               History’s first on-camera human–A.I. romance is currently developing
-              between a contestant and an AI performer named Coltyn.<sup>2</sup> Legal
-              considers this a defensible content moat.
+              between a contestant and an AI performer named Greysuit — a gray bodysuit
+              with an iPad for a face.<sup>2</sup> Legal considers this a defensible
+              content moat.
             </p>
           </div>
           <div className="invest-feature__media">

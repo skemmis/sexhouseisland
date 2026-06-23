@@ -38,9 +38,10 @@ const CAST = [
   ["sage",    "Head-and-shoulders promo portrait of an intense, serene blonde wellness-influencer mom in her late 30s holding up a mason jar of murky green juice, beatific unsettling calm smile, crunchy natural-living energy, linen top."],
   ["xiao",    "Head-and-shoulders promo portrait of an elegant humanoid companion robot with a beautiful flawless synthetic face, faint seams along the jaw, softly glowing eyes, sleek metallic-pearl skin, refined and poetic expression."],
   ["tanner",  "Head-and-shoulders promo portrait of a smug looksmaxxed 28-year-old man with an exaggerated sharp jawline and perfect veneers, podcaster headphones around his neck, leaning toward a large podcast microphone, self-satisfied smirk."],
-  ["coltyn",  "Head-and-shoulders promo portrait of an impossibly handsome man with perfectly symmetrical features and an uncanny too-perfect quality, faint blue screen-glow on his skin, a hint of a skintight gray collar, dreamy heartthrob expression."],
+  ["greysuit", "Reality-TV promo portrait of a person in a skintight full-body matte grey spandex zentai suit that completely covers the head and face, posing confidently like a dating-show heartthrob. An iPad tablet is strapped over the front of their face like a mask; the iPad screen displays a softly glowing CG render of an impossibly handsome man's face with a dreamy smile. Head and shoulders, hands-on-hips contestant pose."],
   ["lenore",  "Head-and-shoulders promo portrait of a distinguished, dignified silver-haired actor in his 70s, dressed in a tasteful linen blazer, looking quietly out of place and melancholy among bright colors, prestige-drama gravitas."],
   ["marco",   "Head-and-shoulders promo portrait of a glistening soaking-wet 30-year-old man, water dripping down his face and bare shoulders, a towel draped around his neck caught mid-towel-off, perpetually damp, charming uneasy smile, beads of water everywhere."],
+  ["mckenzie", "Head-and-shoulders promo portrait of a 20-year-old woman with an early-2000s nu-metal look: heavy black eyeliner, a small eyebrow piercing and a lip ring, choppy dyed-black hair with chunky highlights, wearing an oversized plain white hoodie, a slightly moody unimpressed expression with the faintest smirk."],
 ];
 
 // Scene / brand imagery (wider crops). An optional 3rd element overrides the

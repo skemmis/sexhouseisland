@@ -7,7 +7,7 @@ export function CastPage() {
       <PageHero
         kicker="Season 50 · Now streaming, allegedly"
         title="Meet the Cast"
-        sub="Nine strangers, hand-selected by an algorithm optimizing for a single variable. Swipe through the most fuckable demographic of all: young people."
+        sub="Ten strangers, hand-selected by an algorithm optimizing for a single variable. Swipe through the most fuckable demographic of all: young people."
       />
 
       <section className="section">

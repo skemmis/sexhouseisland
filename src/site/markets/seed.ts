@@ -34,8 +34,8 @@ export const SEED_MARKETS: Market[] = [
     hot: true,
   },
   {
-    id: "coltyn-reveal",
-    question: "Will Coltyn be revealed as an A.I. on camera this week?",
+    id: "greysuit-reveal",
+    question: "Will the human inside Greysuit be revealed on camera this week?",
     category: "ai",
     outcomes: yes(0.63),
     history: hist(0.63),
@@ -103,7 +103,7 @@ export const SEED_MARKETS: Market[] = [
     question: "Who will couple up first?",
     category: "romance",
     outcomes: [
-      { id: "danni-coltyn", label: "Danni & Coltyn", prob: 0.38, prevProb: 0.38 },
+      { id: "danni-greysuit", label: "Danni & Greysuit", prob: 0.38, prevProb: 0.38 },
       { id: "tanner-sage", label: "Tanner & Sage", prob: 0.21, prevProb: 0.21 },
       { id: "marco-danni", label: "Marco & Danni", prob: 0.18, prevProb: 0.18 },
       { id: "brock-xiao", label: "Brock & Xiao", prob: 0.14, prevProb: 0.14 },
@@ -135,13 +135,14 @@ function idxHist(base: number, vol: number, n = 48): number[] {
 }
 
 export const SEED_LEADERBOARD: LeaderRow[] = [
-  { id: "coltyn", name: "Coltyn", score: 94.2, prevScore: 94.2 },
+  { id: "greysuit", name: "Greysuit", score: 94.2, prevScore: 94.2 },
   { id: "danni", name: "Danni", score: 91.7, prevScore: 91.7 },
   { id: "marco", name: "Marco", score: 80.5, prevScore: 80.5 },
   { id: "tanner", name: "Tanner", score: 77.1, prevScore: 77.1 },
   { id: "brock", name: "Brock", score: 71.9, prevScore: 71.9 },
   { id: "sage", name: "Sage", score: 64.0, prevScore: 64.0 },
   { id: "xiao", name: "Xiao", score: 61.3, prevScore: 61.3 },
+  { id: "mckenzie", name: "McKenzie", score: 58.7, prevScore: 58.7 },
   { id: "grayson", name: "Grayson", score: 44.8, prevScore: 44.8 },
   { id: "lenore", name: "Mr. Strathairn", score: 12.6, prevScore: 12.6 },
 ];
@@ -149,14 +150,14 @@ export const SEED_LEADERBOARD: LeaderRow[] = [
 // Fake trader handles for the live bet feed.
 export const TRADERS = [
   "pelican_pilled", "danni_truther", "WetManWaiter", "qat_chewer_88", "abandoned_by_god",
-  " totemhead".trim(), "ohbookballer", "coltyn_is_real", "drone_dad", "sexiness_maxi",
+  " totemhead".trim(), "ohbookballer", "greysuit_is_real", "drone_dad", "sexiness_maxi",
   "ghazal_andy", "MAHA_mommy", "footage_finder", "Tostito_Whale", "no_game_no_life",
   "strathairn_stan", "boba_farmer", "screenface_99", "lube_only_medkit", "ROIonROMANCE",
 ];
 
 export const MARKET_SHORTS: Record<string, string> = {
   "love-day3": "Love by Day 3",
-  "coltyn-reveal": "Coltyn = A.I.?",
+  "greysuit-reveal": "Who's in the Greysuit?",
   "pelican-footage": "Footage returned?",
   "wifi-friday": "WiFi survives Friday",
   "brock-eats": "Brock eats it",
