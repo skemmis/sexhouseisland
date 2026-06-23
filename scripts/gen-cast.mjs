@@ -24,6 +24,12 @@ const LOOK =
   "high-key, vivid colors, subtle lens glow. Sharp, magazine-cover quality. " +
   "Absolutely NO text, NO captions, NO watermarks, NO logos anywhere in the image.";
 
+// For shots that should read as a real photograph instead of bubblegum promo art.
+const PHOTO =
+  "Photorealistic wildlife photograph, shot on a DSLR with an 85mm lens, natural " +
+  "golden-hour daylight, shallow depth of field, crisp feather and texture detail, " +
+  "true-to-life color. Absolutely NO text, NO captions, NO watermarks, NO logos.";
+
 // Cast headshots: tight head-and-shoulders, looking at camera unless noted.
 const CAST = [
   ["danni",   "Head-and-shoulders promo portrait of a sweet, innocent-looking 18-year-old American woman with long blonde hair and big wide hopeful eyes, a slightly overwhelmed bright smile, wearing a pink bikini top and layered necklaces, girl-next-door energy."],
@@ -37,17 +43,18 @@ const CAST = [
   ["marco",   "Head-and-shoulders promo portrait of a glistening soaking-wet 30-year-old man, water dripping down his face and bare shoulders, a towel draped around his neck caught mid-towel-off, perpetually damp, charming uneasy smile, beads of water everywhere."],
 ];
 
-// Scene / brand imagery (wider crops).
+// Scene / brand imagery (wider crops). An optional 3rd element overrides the
+// default bubblegum LOOK with a different style (e.g. photoreal).
 const SCENES = [
   ["hero",    "Wide cinematic promotional banner for a cheesy reality dating show set on a tropical island. A glossy bubblegum-pink and turquoise lagoon, a luxury villa with neon, dozens of small camera drones hovering in the sky, a few pelicans gliding past, a giant carved tiki totem head glowing on the beach. Vibrant, saturated, over-the-top, fun. NO text, NO captions, NO logos."],
   ["aiia",    "A large carved wooden tiki totem-pole head on a tropical beach at dusk, its carved eyes and mouth glowing with neon cyan and pink light like a screen, wires and a small server rack at its base, ominous but cute, bubblegum color palette. NO text, NO logos."],
-  ["pelican", "A single enormous comical pelican on a bright bubblegum-pink beach, its huge beak pouch bulging, a computer hard drive and data cables comically poking out of its beak, mischievous expression, saturated cheesy reality-TV lighting. NO text, NO logos."],
+  ["pelican", "A photorealistic close-up of a single large brown pelican standing on a sunny tropical beach, turquoise sea blurred behind it. Its enormous beak pouch is bulging, and a black external computer hard drive with a trailing USB cable is visibly clamped in its beak, as if it just swallowed it. The bird looks alert and slightly guilty. Realistic, candid, like a press wildlife photo.", PHOTO],
   ["drone",   "A swarm of small white quadcopter camera drones hovering over a turquoise pool, bubblegum-pink sky, one drone in sharp focus in the foreground with a glossy camera lens, glamorous cheesy lighting. NO text, NO logos."],
 ];
 
-async function generate(prompt) {
+async function generate(prompt, style = LOOK) {
   const body = {
-    contents: [{ parts: [{ text: `${prompt}\n\n${LOOK}` }] }],
+    contents: [{ parts: [{ text: `${prompt}\n\n${style}` }] }],
     generationConfig: { responseModalities: ["IMAGE"] },
   };
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -100,19 +107,19 @@ async function main() {
   if (!KEY) { console.error("AI_INTEGRATIONS_GEMINI_API_KEY not set"); process.exit(1); }
   const only = new Set(process.argv.slice(2));
   const all = [
-    ...CAST.map(([id, p]) => ["img/cast", id, p, 600]),
-    ...SCENES.map(([id, p]) => ["img", id, p, 900]),
+    ...CAST.map(([id, p]) => ["img/cast", id, p, 600, LOOK]),
+    ...SCENES.map(([id, p, style]) => ["img", id, p, 900, style ?? LOOK]),
   ];
   const jobs = only.size ? all.filter(([, id]) => only.has(id)) : all;
 
-  for (const [dir, id, prompt, maxDim] of jobs) {
+  for (const [dir, id, prompt, maxDim, style] of jobs) {
     const outDir = join(root, "public", dir);
     mkdirSync(outDir, { recursive: true });
     const outPath = join(outDir, `${id}.jpg`);
     if (existsSync(outPath) && !only.size) { console.log(`skip ${id} (exists)`); continue; }
     process.stdout.write(`gen ${id} … `);
     try {
-      const png = await generate(prompt);
+      const png = await generate(prompt, style);
       const jpg = shrinkToJpeg(png, maxDim);
       writeFileSync(outPath, jpg);
       console.log(`ok (${(jpg.length / 1024) | 0} KB)`);
