@@ -61,17 +61,6 @@ export const CAST: CastMember[] = [
     tag: "Raw • Unfiltered • Possibly correct",
   },
   {
-    id: "xiao",
-    name: "Xiao",
-    epithet: "The Companion (Model XT)",
-    age: "Manufactured this year",
-    hometown: "Shenzhen",
-    bio:
-      "Marketed as the ultimate companion unit, Xiao was — through a procurement error — trained almost exclusively on Medieval Persian courtship poetry. It cannot be charmed by abs or audience numbers. It can only be charmed by a perfectly recited ghazal. Several housemates are studying.",
-    quote: "Speak to me of the rose, or do not speak to me at all.",
-    tag: "Allied? • Firmware v50.1",
-  },
-  {
     id: "tanner",
     name: "Tanner",
     epithet: "The Recap King",

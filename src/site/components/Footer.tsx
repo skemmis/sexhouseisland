@@ -1,12 +1,3 @@
-const SPONSORS = [
-  "Cum Rag™ — sponsored by Tostitos",
-  "Twidsulin® — insulin-adjacent",
-  "Tombstone Pizza — 25 pts per slice",
-  "O-Book™ Gambling",
-  "Daily Wire App (the only app)",
-  "Juicero-for-Protein",
-];
-
 const FOOTNOTES = [
   "“Family affair” meant figuratively. In accordance with Hofster v. Sex House LLC (Md. 2017), Sex House Island is now a strictly incest-free zone.",
   "“Fully autonomous” includes a 24-hour anonymous human contractor team in skintight gray bodysuits whom we are legally required to mention exactly once.",
@@ -18,15 +9,6 @@ const FOOTNOTES = [
 export function Footer() {
   return (
     <footer className="footer">
-      <div className="footer__sponsors">
-        <span className="footer__sponsors-lbl">This season made possible by</span>
-        <div className="footer__sponsor-row">
-          {SPONSORS.map((s) => (
-            <span key={s} className="footer__sponsor">{s}</span>
-          ))}
-        </div>
-      </div>
-
       <div className="footer__main">
         <div className="footer__brand">
           <div className="footer__logo">SEX HOUSE ISLAND</div>
