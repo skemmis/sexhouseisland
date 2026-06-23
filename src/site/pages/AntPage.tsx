@@ -5,7 +5,7 @@ const TIMELINE = [
   {
     day: "Day 1",
     t: "A monitor lizard situation",
-    d: "On arrival, the production Jeep struck a large monitor lizard. The driver wished to bury it. The host said “whatever the f***” and threw it into the WiFi closet instead.",
+    d: "On arrival, the production Jeep struck a large monitor lizard. The driver wished to bury it.",
   },
   {
     day: "Day 1, later",
