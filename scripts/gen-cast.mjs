@@ -100,7 +100,7 @@ async function main() {
   if (!KEY) { console.error("AI_INTEGRATIONS_GEMINI_API_KEY not set"); process.exit(1); }
   const only = new Set(process.argv.slice(2));
   const all = [
-    ...CAST.map(([id, p]) => ["cast", id, p, 600]),
+    ...CAST.map(([id, p]) => ["img/cast", id, p, 600]),
     ...SCENES.map(([id, p]) => ["img", id, p, 900]),
   ];
   const jobs = only.size ? all.filter(([, id]) => only.has(id)) : all;

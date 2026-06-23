@@ -4,7 +4,7 @@ export function CastCard({ member }: { member: CastMember }) {
   return (
     <article className="cast-card">
       <div className="cast-card__photo">
-        <img src={`/cast/${member.id}.jpg`} alt={member.name} loading="lazy" />
+        <img src={`/img/cast/${member.id}.jpg`} alt={member.name} loading="lazy" />
         <span className="cast-card__epithet">{member.epithet}</span>
       </div>
       <div className="cast-card__body">

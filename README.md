@@ -39,7 +39,7 @@ npm run preview    # serve the production build
 
 ## Cast & scene imagery
 
-The glossy headshots and scene art in `public/cast` and `public/img` are
+The glossy headshots and scene art in `public/img/cast` and `public/img` are
 generated with Google's Gemini image model:
 
 ```bash
