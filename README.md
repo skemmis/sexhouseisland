@@ -1,68 +1,57 @@
-# Sex House Island — a SCUMM-style vertical slice
+# Sex House Island — Season 50 promotional site
 
-A lightweight, vibe-coded proof-of-concept for an 80s/90s LucasArts-style
-point-and-click adventure, built with **TypeScript + HTML5 Canvas**, no
-framework. It exists to answer one question: *how feasible is this, really?*
+The official promo website for **Sex House Island**, the landmark 50th season of
+the franchise: the first totally-autonomous season, an all-drone camera crew, an
+AI-run house (**A.I.I.A.**), and a fully live (and fully fake) prediction-market
+platform — all in cheesy bubblegum reality-TV packaging.
 
-**Answer: the engine is the easy part. This whole slice is ~600 lines.**
+Built with **React + Vite + TypeScript**. No backend required — the markets are
+simulated client-side.
 
 ## Run it
 
 ```bash
 npm install
-npm run dev      # open the printed localhost URL
+npm run dev        # open the printed localhost URL
+npm run build      # production build → dist/
+npm run preview    # serve the production build
 ```
 
-## What the slice proves (the full SCUMM loop, end-to-end)
+## Pages
 
-- **A walkable room** with a painted backdrop and a walkable floor band.
-- **Depth scaling** — the character shrinks as they walk "into" the screen
-  (the classic LucasArts trick), see `Character.scaleIn()`.
-- **The 9-verb interface** (Give / Open / Close / Pick up / Look at / Talk to /
-  Use / Push / Pull) + a sentence line that reads like the real thing.
-- **Hotspots** with per-object walk-to points.
-- **Inventory** + **"Use X on Y"** combination logic.
-- **A dialogue tree** (talk to the parrot).
-- **A real 3-step puzzle** with a win state:
-  1. *Pick up* the fishing rod.
-  2. *Use* the rod on the wishing well → fish out a rusty key.
-  3. *Use* the key on the tavern door → you're in. 🎉
-  The parrot hints the solution if you *Talk to* it.
+| Route        | What it is |
+|--------------|------------|
+| `/`          | Landing page: hero, cast teaser, the live **Markets** board, investor + ant teasers. |
+| `/cast`      | **Meet the Cast** — the Season 50 contestants + host **A.I.I.A.** |
+| `/markets`   | **Sex House Island Markets** — the full prediction-market board. |
+| `/investors` | **For Investors** — the autonomous-season pitch, KPIs, risk factors. |
+| `/ants`      | **An Update on the Ant Situation** — the ant + pelican transparency statement. |
 
-## The thing you were worried about: animation assets
+## The Markets engine
 
-There are **zero art files in this repo.** The character's walk cycle, idle
-bob, facing, and talk-flap are all **drawn in code** (`src/character.ts`).
-That's deliberate — it lets the *engine* run and be felt before a single
-sprite is authored, which is exactly how you de-risk the art question.
+`src/site/markets/` is a self-contained, client-side simulation:
 
-### Where AI-generated pixel art drops in
+- `MarketsProvider.tsx` ticks every ~1.1s, random-walking each market's implied
+  probability, the market indices, the sexiness stack-rank, and a live feed of
+  fake trades. Everything on the board reads from one React context (`useMarkets`).
+- `seed.ts` holds the opening board state and copy; `types.ts` the data model.
+- Charts (`components/Chart.tsx`) are hand-rolled SVG — no charting dependency.
 
-The architecture cleanly separates **engine** from **assets**:
+## Cast & scene imagery
 
-| Procedural placeholder (today)        | Production swap (later)                         |
-|---------------------------------------|------------------------------------------------|
-| `Character.draw()` draws a stick-ish hero | `ctx.drawImage(walkSheet, frame.sx, …)` from a sprite sheet |
-| `room.paint()` paints the dock in code    | `ctx.drawImage(backgroundImage, 0, 0)`          |
-| `drawIcon()` draws inventory icons        | blit from an item atlas                          |
+The glossy headshots and scene art in `public/cast` and `public/img` are
+generated with Google's Gemini image model:
 
-Nothing else changes — pathing, depth scale, facing, verbs, and puzzle logic
-all stay identical. A realistic per-character art budget for this style is
-~15–25 small frames (walk = 3 directions × ~8 frames with mirroring, plus
-idle + a 2-frame talk flap). That's the actual scope of the "scary" part.
+```bash
+AI_INTEGRATIONS_GEMINI_API_KEY=... npm run gen:cast          # regenerate all
+AI_INTEGRATIONS_GEMINI_API_KEY=... node scripts/gen-cast.mjs danni hero  # just some
+```
 
-## File map
+See `scripts/gen-cast.mjs` for the prompts (and the box-downscale → JPEG step
+that keeps the repo light).
 
-| File | Role |
-|------|------|
-| `src/types.ts`     | The data model (rooms, hotspots, items, dialogue). |
-| `src/game.ts`      | **Authoring layer** — the room, the puzzle, dialogue. Edit this to make a game. |
-| `src/character.ts` | The player + procedural animation (the asset-swap seam). |
-| `src/main.ts`      | **Engine** — input, verb bar, inventory, dialogue UI, game loop. Game-agnostic. |
+## Note on the original game
 
-## Honest caveats
-
-The hard parts of shipping a *real* one aren't here and aren't engine work:
-**art coherence**, **reliable pixel-art generation** (consistent character
-identity across frames is where current image models struggle), and **writing
-/ puzzle design** (hand-authored — the genre lives or dies on it).
+This repo previously held a SCUMM-style point-and-click vertical slice. That
+engine still lives under `src/` (`src/main.ts`, `src/game/`, etc.) but is no
+longer part of the default build — the promo site is now the entry point.
