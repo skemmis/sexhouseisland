@@ -30,6 +30,13 @@ const PHOTO =
   "golden-hour daylight, shallow depth of field, crisp feather and texture detail, " +
   "true-to-life color. Absolutely NO text, NO captions, NO watermarks, NO logos.";
 
+// Photoreal but dark and ominous — for a menacing, cinematic look.
+const CINEMATIC =
+  "Photorealistic cinematic photograph, shot on a full-frame camera with a wide lens " +
+  "from a low menacing angle, dramatic low-key lighting, deep shadows, moody overcast " +
+  "dusk sky, realistic materials (weathered carved wood, faint glowing screens), " +
+  "ominous and foreboding mood, high detail. Absolutely NO text, NO captions, NO logos.";
+
 // Cast headshots: tight head-and-shoulders, looking at camera unless noted.
 const CAST = [
   ["danni",   "Head-and-shoulders promo portrait of a sweet, innocent-looking 18-year-old American woman with long blonde hair and big wide hopeful eyes, a slightly overwhelmed bright smile, wearing a pink bikini top and layered necklaces, girl-next-door energy."],
@@ -48,7 +55,7 @@ const CAST = [
 // default bubblegum LOOK with a different style (e.g. photoreal).
 const SCENES = [
   ["hero",    "Wide cinematic promotional banner for a cheesy reality dating show set on a tropical island. A glossy bubblegum-pink and turquoise lagoon, a luxury villa with neon, dozens of small camera drones hovering in the sky, a few pelicans gliding past, a giant carved tiki totem head glowing on the beach. Vibrant, saturated, over-the-top, fun. NO text, NO captions, NO logos."],
-  ["aiia",    "A large carved wooden tiki totem-pole head on a tropical beach at dusk, its carved eyes and mouth glowing with neon cyan and pink light like a screen, wires and a small server rack at its base, ominous but cute, bubblegum color palette. NO text, NO logos."],
+  ["aiia",    "A massive, imposing hand-carved dark wooden tiki totem head standing on the manicured grounds of a sleek modern luxury villa at dusk. Its deep-set carved eyes and wide grinning mouth glow from within with a cold, eerie light, like embedded screens. Thick cables and a weatherproof server box sit at its base. The lit villa, palm trees and an infinity pool are behind it. It looks like an ancient idol that has been wired into the house and is watching everyone.", CINEMATIC],
   ["pelican", "A photorealistic close-up of a single large brown pelican standing on a sunny tropical beach, turquoise sea blurred behind it. Its enormous beak pouch is bulging, and a black external computer hard drive with a trailing USB cable is visibly clamped in its beak, as if it just swallowed it. The bird looks alert and slightly guilty. Realistic, candid, like a press wildlife photo.", PHOTO],
   ["drone",   "A swarm of small white quadcopter camera drones hovering over a turquoise pool, bubblegum-pink sky, one drone in sharp focus in the foreground with a glossy camera lens, glamorous cheesy lighting. NO text, NO logos."],
 ];
